@@ -1,178 +1,959 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Marketing Funnel Analytics — Console</title>
-  <style>
-    :root {
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --ink: #1a1c23;
-      --muted: #5b6270;
-      --line: #e4e7ec;
-      --accent: #3b5bdb;
-      --accent-soft: #eaefff;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Marketing Funnel Analytics — Learn</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --panel:#ffffff; --panel-2:#fbfcfe;
+    --ink:#161922; --muted:#616b7a; --faint:#8a93a3;
+    --line:#e6e9ef; --line-2:#eef1f6;
+    --accent:#4c63e6; --accent-ink:#3547c4; --accent-soft:#eaeeff;
+    --amber:#b7791f; --amber-soft:#fdf4e3;
+    --green:#2f855a; --green-soft:#e6f6ec;
+    --red:#c53030; --red-soft:#fdeaea;
+    --code-bg:#1c2030; --code-ink:#e7ebf5; --code-kw:#9db4ff;
+    --code-str:#9ae6b4; --code-com:#7f8aa3; --code-num:#f6ad9c;
+    --ring-track:#e6e9ef;
+    --shadow:0 1px 2px rgba(20,25,34,.04),0 4px 16px rgba(20,25,34,.05);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0d0f14; --panel:#151821; --panel-2:#12141c;
+    --ink:#e9ecf2; --muted:#9aa3b2; --faint:#6b7484;
+    --line:#242835; --line-2:#1d212c;
+    --accent:#7d92ff; --accent-ink:#9fb0ff; --accent-soft:#1b2138;
+    --amber:#e0b155; --amber-soft:#2a2416;
+    --green:#68d391; --green-soft:#16261c;
+    --red:#fc8181; --red-soft:#2a1717;
+    --code-bg:#0a0c12; --code-ink:#e7ebf5; --code-kw:#9db4ff;
+    --code-str:#9ae6b4; --code-com:#6b7591; --code-num:#f6ad9c;
+    --ring-track:#242835;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0d0f14; --panel:#151821; --panel-2:#12141c;
+      --ink:#e9ecf2; --muted:#9aa3b2; --faint:#6b7484;
+      --line:#242835; --line-2:#1d212c;
+      --accent:#7d92ff; --accent-ink:#9fb0ff; --accent-soft:#1b2138;
+      --amber:#e0b155; --amber-soft:#2a2416;
+      --green:#68d391; --green-soft:#16261c;
+      --red:#fc8181; --red-soft:#2a1717;
+      --code-bg:#0a0c12; --code-ink:#e7ebf5; --code-kw:#9db4ff;
+      --code-str:#9ae6b4; --code-com:#6b7591; --code-num:#f6ad9c;
+      --ring-track:#242835;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
     }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f1116;
-        --panel: #171a21;
-        --ink: #e8eaed;
-        --muted: #9aa1ad;
-        --line: #262a33;
-        --accent: #7b93ff;
-        --accent-soft: #1a2036;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
-    }
-    .wrap {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 64px 24px 96px;
-    }
-    .badge {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--accent);
-      background: var(--accent-soft);
-      border: 1px solid var(--line);
-      padding: 5px 11px;
-      border-radius: 999px;
-      margin-bottom: 22px;
-    }
-    h1 {
-      font-size: clamp(28px, 5vw, 40px);
-      line-height: 1.15;
-      margin: 0 0 14px;
-      letter-spacing: -0.02em;
-    }
-    .lede {
-      font-size: 18px;
-      color: var(--muted);
-      margin: 0 0 36px;
-      max-width: 60ch;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 26px 26px;
-      margin: 0 0 20px;
-    }
-    .panel h2 {
-      font-size: 15px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      margin: 0 0 16px;
-    }
-    ol.funnel {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    ol.funnel li {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--accent-soft);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    ol.funnel li span.stage { color: var(--ink); }
-    ol.funnel li span.val { color: var(--muted); font-variant-numeric: tabular-nums; }
-    ol.funnel li:nth-child(1) { width: 100%; }
-    ol.funnel li:nth-child(2) { width: 82%; }
-    ol.funnel li:nth-child(3) { width: 64%; }
-    ol.funnel li:nth-child(4) { width: 48%; }
-    ol.funnel li:nth-child(5) { width: 32%; }
-    .note {
-      font-size: 14px;
-      color: var(--muted);
-    }
-    a.btn {
-      display: inline-block;
-      margin-top: 8px;
-      color: #fff;
-      background: var(--accent);
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 15px;
-      padding: 11px 20px;
-      border-radius: 9px;
-    }
-    a.link { color: var(--accent); }
-    footer {
-      margin-top: 40px;
-      padding-top: 22px;
-      border-top: 1px solid var(--line);
-      font-size: 13px;
-      color: var(--muted);
-    }
-    code {
-      background: var(--accent-soft);
-      border: 1px solid var(--line);
-      border-radius: 5px;
-      padding: 1px 6px;
-      font-size: 13px;
-    }
-  </style>
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent-ink)}
+  /* ---------- layout ---------- */
+  .app{display:grid; grid-template-columns:288px 1fr; min-height:100vh}
+  .sidebar{
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+    background:var(--panel); border-right:1px solid var(--line);
+    padding:22px 16px; display:flex; flex-direction:column; gap:14px;
+  }
+  .brand{display:flex; align-items:center; gap:10px; padding:2px 6px 8px}
+  .brand .mark{
+    width:34px;height:34px;border-radius:9px;flex:0 0 auto;
+    background:linear-gradient(135deg,var(--accent),#8a5cf6);
+    display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;
+  }
+  .brand b{font-size:15px;letter-spacing:-.01em;display:block;line-height:1.2}
+  .brand small{color:var(--faint);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  .side-progress{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 13px}
+  .side-progress .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:600}
+  .bar{height:7px;border-radius:99px;background:var(--ring-track);overflow:hidden}
+  .bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#8a5cf6);border-radius:99px;transition:width .4s ease}
+  nav{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+  nav .nav-h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:10px 10px 4px}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
+    color:var(--ink);text-decoration:none;font-size:13.5px;cursor:pointer;border:1px solid transparent;
+  }
+  .nav-item:hover{background:var(--panel-2)}
+  .nav-item.active{background:var(--accent-soft);border-color:var(--line);color:var(--accent-ink);font-weight:600}
+  .nav-item .ix{width:22px;height:22px;flex:0 0 auto;border-radius:6px;display:grid;place-items:center;font-size:11.5px;font-weight:700;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+  .nav-item.active .ix{background:var(--accent);color:#fff;border-color:transparent}
+  .nav-item .tick{margin-left:auto;color:var(--green);font-size:13px;opacity:0}
+  .nav-item.done .tick{opacity:1}
+  .side-foot{margin-top:auto;display:flex;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--line-2)}
+  .ghost{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-weight:600}
+  .ghost:hover{color:var(--ink)}
+  /* ---------- main ---------- */
+  main{padding:0;min-width:0}
+  .content{max-width:820px;margin:0 auto;padding:44px 32px 120px;min-width:0}
+  .eyebrow{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-ink)}
+  h1.page{font-size:34px;line-height:1.12;letter-spacing:-.02em;margin:10px 0 8px}
+  .sub{color:var(--muted);font-size:17px;margin:0 0 26px;max-width:62ch}
+  h2.sec{font-size:22px;letter-spacing:-.01em;margin:38px 0 12px;padding-top:8px}
+  h3.sub-h{font-size:16px;margin:26px 0 10px;color:var(--ink)}
+  p{margin:0 0 14px}
+  .content ul,.content ol{margin:0 0 16px;padding-left:22px}
+  .content li{margin:6px 0}
+  .lead{font-size:16px}
+  /* cards / callouts */
+  .concept{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 20px 18px;margin:16px 0;box-shadow:var(--shadow);position:relative;
+  }
+  .concept .c-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:6px}
+  .concept .c-emoji{font-size:19px;line-height:1.3}
+  .concept h3{margin:0;font-size:16.5px}
+  .concept .read-btn{
+    margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--muted);
+    border-radius:99px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;
+  }
+  .concept.read{border-color:var(--green)}
+  .concept.read .read-btn{background:var(--green-soft);color:var(--green);border-color:var(--green)}
+  .callout{border-radius:12px;padding:15px 17px;margin:16px 0;border:1px solid var(--line);background:var(--panel-2)}
+  .callout .k{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+  .callout p:last-child{margin-bottom:0}
+  .callout.turn{background:var(--amber-soft);border-color:var(--amber)}
+  .callout.turn .k{color:var(--amber)}
+  .callout.warn{background:var(--red-soft);border-color:var(--red)}
+  .callout.warn .k{color:var(--red)}
+  .callout.tip{background:var(--accent-soft);border-color:var(--accent)}
+  .callout.tip .k{color:var(--accent-ink)}
+  .checkpoint{background:var(--green-soft);border:1px solid var(--green);border-radius:12px;padding:16px 18px;margin:22px 0}
+  .checkpoint .k{color:var(--green);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .checkpoint .done-btn{margin-top:12px;background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 15px;font-size:13.5px;font-weight:600;cursor:pointer}
+  .checkpoint.is-done .done-btn{background:var(--panel);color:var(--green);border:1px solid var(--green)}
+  /* code */
+  figure.code{margin:16px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--code-bg)}
+  figure.code figcaption{display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07)}
+  figure.code .lang{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#aeb8d4;background:rgba(255,255,255,.07);padding:2px 8px;border-radius:6px}
+  figure.code .cap{font-size:12px;color:#aeb8d4}
+  figure.code .copy{margin-left:auto;background:rgba(255,255,255,.08);color:#dfe5f5;border:none;border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:600}
+  figure.code .copy:hover{background:rgba(255,255,255,.16)}
+  figure.code pre{margin:0;padding:15px 16px;overflow-x:auto}
+  figure.code code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.62;color:var(--code-ink);white-space:pre}
+  .kw{color:var(--code-kw)} .str{color:var(--code-str)} .com{color:var(--code-com);font-style:italic} .num{color:var(--code-num)}
+  code.inline{background:var(--accent-soft);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--accent-ink)}
+  /* reveal */
+  details.reveal{border:1px solid var(--line);border-radius:12px;margin:16px 0;background:var(--panel);overflow:hidden}
+  details.reveal>summary{list-style:none;cursor:pointer;padding:14px 17px;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;color:var(--accent-ink)}
+  details.reveal>summary::-webkit-details-marker{display:none}
+  details.reveal>summary .chev{transition:transform .2s;color:var(--muted)}
+  details.reveal[open]>summary .chev{transform:rotate(90deg)}
+  details.reveal>summary .rl{margin-left:auto;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--amber);background:var(--amber-soft);padding:3px 8px;border-radius:6px;border:1px solid var(--amber)}
+  .reveal-body{padding:2px 18px 18px;border-top:1px solid var(--line-2)}
+  .reveal-body>*:first-child{margin-top:14px}
+  /* diagrams */
+  figure.diagram{margin:20px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+  figure.diagram svg{width:100%;height:auto;display:block}
+  figure.diagram figcaption{margin-top:12px;font-size:13px;color:var(--muted);text-align:center}
+  /* tables */
+  .tbl-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:12px}
+  table.data{border-collapse:collapse;width:100%;font-size:13.5px}
+  table.data th,table.data td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line-2)}
+  table.data th{background:var(--panel-2);font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  table.data tr:last-child td{border-bottom:none}
+  /* dashboard */
+  .dash-hero{display:grid;grid-template-columns:200px 1fr;gap:28px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px 28px;box-shadow:var(--shadow);margin-bottom:26px}
+  .ring{position:relative;width:180px;height:180px;margin:0 auto}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .rc{fill:none;stroke:var(--ring-track);stroke-width:14}
+  .ring .rp{fill:none;stroke:url(#g);stroke-width:14;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+  .ring .ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .ctr b{font-size:34px;letter-spacing:-.02em;line-height:1}
+  .ring .ctr span{font-size:12px;color:var(--muted);font-weight:600;margin-top:3px}
+  .hero-stats{display:flex;flex-direction:column;gap:14px}
+  .hero-stats h2{margin:0 0 2px;font-size:20px}
+  .stat-row{display:flex;gap:12px;flex-wrap:wrap}
+  .stat{flex:1;min-width:120px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat b{font-size:22px;display:block;line-height:1.1}
+  .stat span{font-size:12px;color:var(--muted)}
+  .cont-btn{align-self:flex-start;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+  .mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .mod-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 17px;cursor:pointer;box-shadow:var(--shadow);transition:transform .12s,border-color .12s}
+  .mod-card:hover{transform:translateY(-2px);border-color:var(--accent)}
+  .mod-card .mc-top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .mod-card .mc-ix{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-weight:800;font-size:13px;background:var(--accent-soft);color:var(--accent-ink)}
+  .mod-card.done .mc-ix{background:var(--green);color:#fff}
+  .mod-card .pill{margin-left:auto;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.03em}
+  .pill.ns{background:var(--panel-2);color:var(--faint);border:1px solid var(--line)}
+  .pill.ip{background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber)}
+  .pill.dn{background:var(--green-soft);color:var(--green);border:1px solid var(--green)}
+  .mod-card h3{margin:0 0 4px;font-size:15px}
+  .mod-card p{margin:0 0 12px;font-size:12.5px;color:var(--muted);line-height:1.5}
+  .mod-card .mc-bar{height:6px;border-radius:99px;background:var(--ring-track);overflow:hidden}
+  .mod-card .mc-bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#8a5cf6)}
+  .mod-card .mc-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);margin-top:7px}
+  /* module footer nav */
+  .mod-nav{display:flex;justify-content:space-between;gap:12px;margin-top:44px;padding-top:22px;border-top:1px solid var(--line)}
+  .mod-nav a{flex:1;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:13px 16px;background:var(--panel);color:var(--ink)}
+  .mod-nav a:hover{border-color:var(--accent)}
+  .mod-nav a.nx{text-align:right}
+  .mod-nav small{color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;display:block}
+  .mod-nav b{font-size:14px}
+  .topbar{display:none}
+  /* mobile */
+  .scrim{display:none}
+  @media (max-width:880px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:fixed;left:0;top:0;z-index:40;width:280px;transform:translateX(-100%);transition:transform .25s}
+    .sidebar.open{transform:none}
+    .scrim.show{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:35}
+    .topbar{display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line);padding:12px 16px}
+    .topbar button{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;width:38px;height:38px;font-size:18px;cursor:pointer;color:var(--ink)}
+    .topbar b{font-size:14px}
+    .content{padding:26px 18px 100px}
+    .dash-hero{grid-template-columns:1fr;text-align:center}
+    h1.page{font-size:27px}
+  }
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <span class="badge">Placeholder · Console in progress</span>
-    <h1>Marketing Funnel Analytics</h1>
-    <p class="lede">
-      This page is the deployment target for the funnel-analytics console.
-      The hosting is live; the console itself is built as the final step of
-      the project curriculum and will replace this placeholder.
-    </p>
-
-    <div class="panel">
-      <h2>What will live here</h2>
-      <ol class="funnel">
-        <li><span class="stage">Leads</span><span class="val">stage counts</span></li>
-        <li><span class="stage">MQL → SQL</span><span class="val">conversion rates</span></li>
-        <li><span class="stage">Opportunity</span><span class="val">channel scorecard</span></li>
-        <li><span class="stage">Cohorts</span><span class="val">90-day, maturity-adjusted</span></li>
-        <li><span class="stage">Closed Won</span><span class="val">cost per customer</span></li>
-      </ol>
+<div class="topbar">
+  <button id="burger" aria-label="Menu">☰</button>
+  <b>Funnel Analytics</b>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="mark">FA</div>
+      <div><b>Funnel Analytics</b><small>Learn &amp; Build</small></div>
     </div>
-
-    <div class="panel">
-      <h2>Follow the build</h2>
-      <p class="note">
-        The full curriculum — from database setup to this console — lives in
-        the repository.
-      </p>
-      <a class="btn" href="https://github.com/priandproper/marketing-analyst-project-plan/blob/main/CURRICULUM.md">
-        Read the curriculum →
-      </a>
+    <div class="side-progress">
+      <div class="lab"><span>Course progress</span><span id="sp-pct">0%</span></div>
+      <div class="bar"><span id="sp-bar" style="width:0%"></span></div>
     </div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <button class="ghost" id="theme-btn">◐ Theme</button>
+      <button class="ghost" id="reset-btn">↺ Reset</button>
+    </div>
+  </aside>
+  <main><div class="content" id="view"></div></main>
+</div>
 
-    <footer>
-      To publish the finished console, replace <code>docs/index.html</code>
-      with the console's HTML and push to <code>main</code>. GitHub Pages
-      redeploys automatically.
-    </footer>
-  </div>
+<script>
+/* =====================================================================
+   Marketing Funnel Analytics — in-app learning course
+   Self-contained. Progress persists in localStorage.
+   ===================================================================== */
+
+/* ---------- tiny syntax highlighter (single-pass, safe) ---------- */
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+const SQL_RE=/(--[^\n]*)|('(?:[^']|'')*')|\b(SELECT|FROM|WHERE|GROUP\s+BY|ORDER\s+BY|LEFT|RIGHT|INNER|OUTER|JOIN|ON|AS|AND|OR|NOT|NULL|IS|IN|LIKE|ILIKE|COUNT|DISTINCT|SUM|AVG|MIN|MAX|ROUND|CASE|WHEN|THEN|ELSE|END|FILTER|WITH|CREATE|TABLE|PRIMARY|KEY|REFERENCES|INTEGER|TEXT|TIMESTAMP|NUMERIC|DATE|COPY|FORMAT|HEADER|HAVING|LIMIT|INTERVAL|EXTRACT|EPOCH|date_trunc|true|false)\b|\b(\d+\.?\d*)\b/gi;
+const PY_RE=/(#[^\n]*)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|\b(import|from|for|in|if|elif|else|def|return|global|while|with|as|and|or|not|None|True|False|lambda|continue|break|pass)\b|\b(random|datetime|timedelta|range|int|float|round|open|print|len|min|max|str|list|dict)\b|\b(\d+\.?\d*)\b/g;
+function highlight(code,lang){
+  const e=esc(code);
+  if(lang==='python'){
+    return e.replace(PY_RE,(m,com,s,kw,bi,num)=>{
+      if(com)return `<span class="com">${com}</span>`;
+      if(s)return `<span class="str">${s}</span>`;
+      if(kw)return `<span class="kw">${kw}</span>`;
+      if(bi)return `<span class="kw" style="opacity:.85">${bi}</span>`;
+      if(num)return `<span class="num">${num}</span>`;
+      return m;
+    });
+  }
+  return e.replace(SQL_RE,(m,com,s,kw,num)=>{
+    if(com)return `<span class="com">${com}</span>`;
+    if(s)return `<span class="str">${s}</span>`;
+    if(kw)return `<span class="kw">${kw}</span>`;
+    if(num)return `<span class="num">${num}</span>`;
+    return m;
+  });
+}
+function code(lang,src,cap){
+  const raw=encodeURIComponent(src);
+  return `<figure class="code"><figcaption><span class="lang">${lang}</span>${cap?`<span class="cap">${cap}</span>`:''}<button class="copy" data-code="${raw}">Copy</button></figcaption><pre><code>${highlight(src,lang)}</code></pre></figure>`;
+}
+function callout(kind,label,emoji,html){
+  return `<div class="callout ${kind}"><div class="k">${emoji} ${label}</div>${html}</div>`;
+}
+function reveal(title,html){
+  return `<details class="reveal"><summary><span class="chev">▶</span>${title}<span class="rl">Try first</span></summary><div class="reveal-body">${html}</div></details>`;
+}
+
+/* ---------- SVG diagrams (theme-aware via currentColor / vars) ---------- */
+const D={};
+D.funnel=`<svg viewBox="0 0 520 250" role="img" aria-label="Marketing funnel">
+  ${[['Leads created',0,500,'#4c63e6'],['MQL',44,400,'#5b6ef0'],['SQL',88,300,'#7d6ef0'],['Opportunity',132,210,'#9a6ef0'],['Closed Won',176,120,'#b76ef0']]
+    .map(([lab,y,w,c])=>`<g transform="translate(${(520-w)/2},${y+18})">
+      <rect width="${w}" height="34" rx="6" fill="${c}" opacity="0.9"/>
+      <text x="${w/2}" y="22" text-anchor="middle" fill="#fff" font-size="13" font-weight="600" font-family="sans-serif">${lab}</text>
+    </g>`).join('')}
+</svg>`;
+D.grain=`<svg viewBox="0 0 520 180" role="img" aria-label="Grain of a table">
+  <text x="10" y="22" font-size="13" font-weight="700" fill="var(--ink)" font-family="sans-serif">lead_stage_events</text>
+  <text x="10" y="40" font-size="11.5" fill="var(--muted)" font-family="sans-serif">one row = one lead entering one stage at one moment</text>
+  <g font-family="monospace" font-size="12">
+    ${['event_id · lead_id · stage · event_at','101 · 5 · created · Mar 1','102 · 5 · mql · Mar 4','103 · 5 · sql · Mar 15']
+      .map((t,i)=>`<rect x="10" y="${54+i*28}" width="500" height="24" rx="5" fill="${i===0?'var(--accent-soft)':'var(--panel-2)'}" stroke="var(--line)"/><text x="20" y="${70+i*28}" fill="${i===0?'var(--accent-ink)':'var(--ink)'}" font-weight="${i===0?700:400}">${t}</text>`).join('')}
+  </g>
+  <text x="10" y="172" font-size="11.5" fill="var(--muted)" font-family="sans-serif">Lead 5 appears 3 times — because it entered 3 stages. That's the grain.</text>
+</svg>`;
+D.fanout=`<svg viewBox="0 0 520 210" role="img" aria-label="Fan-out from a join">
+  <text x="10" y="18" font-size="12" font-weight="700" fill="var(--ink)" font-family="sans-serif">spend (1 row / channel-day)</text>
+  <rect x="10" y="28" width="150" height="26" rx="5" fill="var(--accent-soft)" stroke="var(--line)"/><text x="20" y="45" font-size="11.5" font-family="monospace" fill="var(--ink)">google · $500</text>
+  <text x="360" y="18" font-size="12" font-weight="700" fill="var(--ink)" font-family="sans-serif">leads (many / channel)</text>
+  ${[0,1,2,3].map(i=>`<rect x="360" y="${28+i*32}" width="150" height="26" rx="5" fill="var(--panel-2)" stroke="var(--line)"/><text x="370" y="${45+i*32}" font-size="11.5" font-family="monospace" fill="var(--ink)">google · lead ${i+1}</text>`).join('')}
+  ${[0,1,2,3].map(i=>`<line x1="160" y1="41" x2="360" y2="${41+i*32}" stroke="var(--red)" stroke-width="1.5" opacity="0.7"/>`).join('')}
+  <text x="150" y="185" font-size="12" fill="var(--red)" font-weight="600" font-family="sans-serif">$500 gets paired with 4 leads → summed as $2,000. Inflated ✕</text>
+</svg>`;
+D.events=`<svg viewBox="0 0 520 170" role="img" aria-label="Events vs current state">
+  <text x="10" y="18" font-size="12" font-weight="700" fill="var(--green)" font-family="sans-serif">✔ Store events (keep the history)</text>
+  <line x1="20" y1="52" x2="380" y2="52" stroke="var(--line)" stroke-width="2"/>
+  ${[['created',30],['mql',140],['sql',250],['won',360]].map(([l,x])=>`<circle cx="${x}" cy="52" r="6" fill="var(--accent)"/><text x="${x}" y="40" font-size="10.5" text-anchor="middle" fill="var(--ink)" font-family="sans-serif">${l}</text>`).join('')}
+  <text x="10" y="100" font-size="12" font-weight="700" fill="var(--red)" font-family="sans-serif">✕ Store current_stage (overwrite = history destroyed)</text>
+  <rect x="20" y="112" width="120" height="30" rx="6" fill="var(--red-soft)" stroke="var(--red)"/><text x="80" y="132" text-anchor="middle" font-size="12" font-family="monospace" fill="var(--ink)">stage = won</text>
+  <text x="160" y="132" font-size="11.5" fill="var(--muted)" font-family="sans-serif">When did it become MQL? SQL? Unknowable.</text>
+</svg>`;
+D.censoring=`<svg viewBox="0 0 520 200" role="img" aria-label="Censored leads">
+  <line x1="380" y1="10" x2="380" y2="180" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="386" y="20" font-size="11" fill="var(--red)" font-weight="700" font-family="sans-serif">today</text>
+  ${[['Lead A',40,true],['Lead B',75,true],['Lead C',110,false],['Lead D',145,false]].map(([l,y,closed])=>{
+    const end=closed?300:470; const cap=closed?300:380;
+    return `<text x="10" y="${y+4}" font-size="11.5" fill="var(--ink)" font-family="sans-serif">${l}</text>
+    <line x1="70" y1="${y}" x2="${Math.min(end,380)}" y2="${y}" stroke="${closed?'var(--green)':'var(--amber)'}" stroke-width="4" stroke-linecap="round"/>
+    ${closed?`<circle cx="${end}" cy="${y}" r="5" fill="var(--green)"/><text x="${end+10}" y="${y+4}" font-size="10.5" fill="var(--green)" font-family="sans-serif">closed</text>`:`<text x="390" y="${y+4}" font-size="10.5" fill="var(--amber)" font-family="sans-serif">still open →</text>`}`;
+  }).join('')}
+  <text x="10" y="195" font-size="11.5" fill="var(--muted)" font-family="sans-serif">A naïve "avg time to close" uses only A &amp; B — and silently drops C &amp; D, the stuck ones.</text>
+</svg>`;
+D.schema=`<svg viewBox="0 0 540 260" role="img" aria-label="Three-table schema">
+  <g font-family="monospace" font-size="11">
+    <rect x="10" y="20" width="150" height="120" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+    <text x="20" y="38" font-weight="700" font-size="12" fill="var(--accent-ink)" font-family="sans-serif">leads</text>
+    <text x="20" y="58" fill="var(--ink)">🔑 lead_id</text><text x="20" y="76" fill="var(--muted)">created_at</text>
+    <text x="20" y="94" fill="var(--muted)">source_raw</text><text x="20" y="112" fill="var(--muted)">campaign</text><text x="20" y="130" fill="var(--muted)">region</text>
+
+    <rect x="200" y="20" width="170" height="120" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+    <text x="210" y="38" font-weight="700" font-size="12" fill="var(--accent-ink)" font-family="sans-serif">lead_stage_events</text>
+    <text x="210" y="58" fill="var(--ink)">🔑 event_id</text><text x="210" y="76" fill="var(--amber)">🔗 lead_id</text>
+    <text x="210" y="94" fill="var(--muted)">stage</text><text x="210" y="112" fill="var(--muted)">event_at</text>
+
+    <rect x="200" y="165" width="170" height="80" rx="8" fill="var(--panel-2)" stroke="var(--accent)"/>
+    <text x="210" y="183" font-weight="700" font-size="12" fill="var(--accent-ink)" font-family="sans-serif">spend</text>
+    <text x="210" y="203" fill="var(--ink)">🔑 spend_id</text><text x="210" y="221" fill="var(--muted)">channel · spend_date</text><text x="210" y="238" fill="var(--muted)">amount · clicks</text>
+  </g>
+  <line x1="160" y1="70" x2="200" y2="70" stroke="var(--amber)" stroke-width="2"/>
+  <text x="163" y="63" font-size="10" fill="var(--amber)" font-family="sans-serif">1 : many</text>
+  <path d="M410 90 Q470 90 470 150 Q470 200 380 200" fill="none" stroke="var(--faint)" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <text x="420" y="130" font-size="9.5" fill="var(--faint)" font-family="sans-serif">different grain —</text>
+  <text x="420" y="143" font-size="9.5" fill="var(--faint)" font-family="sans-serif">aggregate first</text>
+</svg>`;
+D.cohort=`<svg viewBox="0 0 520 190" role="img" aria-label="Cohort maturity">
+  <text x="10" y="16" font-size="12" font-weight="700" fill="var(--ink)" font-family="sans-serif">Measure every cohort at the SAME age (90 days)</text>
+  ${[['Jan cohort',40,470],['Apr cohort',80,470],['Jun cohort',120,180]].map(([l,y,w])=>`
+    <text x="10" y="${y+4}" font-size="11" fill="var(--ink)" font-family="sans-serif">${l}</text>
+    <rect x="95" y="${y-8}" width="375" height="16" rx="4" fill="var(--panel-2)" stroke="var(--line)"/>
+    <rect x="95" y="${y-8}" width="${Math.min(w-95,90)}" height="16" rx="4" fill="var(--accent)" opacity="0.8"/>
+  `).join('')}
+  <line x1="185" y1="24" x2="185" y2="140" stroke="var(--green)" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="150" y="160" font-size="11" fill="var(--amber)" font-family="sans-serif">Jun is too young — it hasn't had its 90 days yet. Exclude or project it.</text>
+</svg>`;
+function diagram(name,cap){return `<figure class="diagram">${D[name]}${cap?`<figcaption>${cap}</figcaption>`:''}</figure>`;}
+
+/* ---------- concept helper (checkable) ---------- */
+let CID=0;
+function concept(emoji,title,html){
+  const id='c'+(CID++);
+  return {id,emoji,title,html};
+}
+
+/* ---------- COURSE CONTENT ---------- */
+const MODULES=[
+{num:'0',title:'Setup',time:'45 min',tag:'Get your tools ready',
+ concepts:[concept('🔌','Client vs. server — what a database really is',
+   `<p>A database has two halves. The <b>server</b> is a program that runs quietly in the background and holds all your data. The <b>client</b> (like <code class="inline">psql</code>, or a point-and-click app) connects to the server to ask questions. Nearly every real database works this way — and interviewers ask about it.</p>`)],
+ body:`
+  <p class="lead">Good news: PostgreSQL and Python are <b>already installed</b> on your machine, so there's no install gauntlet. You just need to start the database, create your project database, and connect to it.</p>
+  <h3 class="sub-h">1 · Start PostgreSQL</h3>
+  <p>Open Terminal (press <code class="inline">Cmd + Space</code>, type "Terminal"). A command that finishes quietly usually worked — errors are loud.</p>
+  ${code('bash','psql --version\nbrew services start postgresql@16','Confirm it exists, then start the background server')}
+  <h3 class="sub-h">2 · Create your database</h3>
+  <p>One server can hold many databases. Make one for this project, then connect:</p>
+  ${code('bash','createdb marketing_funnel\npsql marketing_funnel')}
+  <p>Your prompt becomes <code class="inline">marketing_funnel=#</code> — you're "inside" the database. Type <code class="inline">\\q</code> to leave, <code class="inline">\\dt</code> to list tables.</p>
+  <h3 class="sub-h">3 · Get a friendly window (recommended)</h3>
+  <p>Typing long queries into a terminal is painful. Install a GUI client — a proper editor with results shown as a grid:</p>
+  <ul><li><b>TablePlus</b> — tableplus.com (easiest, free tier is plenty)</li><li><b>DBeaver</b> — dbeaver.io (fully free)</li></ul>
+  <p>New PostgreSQL connection → host <code class="inline">localhost</code>, port <code class="inline">5432</code>, database <code class="inline">marketing_funnel</code>, user = your Mac username, no password → Connect.</p>
+  <h3 class="sub-h">4 · Save progress with Git</h3>
+  <p>You don't need to master git — just three commands whenever you finish something:</p>
+  ${code('bash','git add -A\ngit commit -m "Describe what you just did"\ngit push')}
+ `,
+ checkpoint:`You can start Postgres, connect to <b>marketing_funnel</b>, run <code class="inline">SELECT 1;</code> and see a result.`
+},
+
+{num:'1',title:'The mental model',time:'45 min',tag:'The ideas everything rests on',
+ concepts:[
+  concept('🎯','Grain — what one row means',
+   `<p><b>Grain = what a single row of a table represents.</b> Before making any table, finish this sentence: "one row here is exactly one ______."</p><p>Why it rules everything: if you're fuzzy on the grain, every count, average and ratio downstream is quietly wrong — and <b>no error message ever warns you.</b> The query runs, the number looks fine, and it's garbage.</p>`),
+  concept('💥','Fan-out — the silent inflator',
+   `<p>Joining a table where one row = one lead to a table where one lead has <i>many</i> rows multiplies your rows. Sum anything afterward and it's inflated — with no error raised.</p>${diagram('fanout','A single $500 spend row, paired with 4 leads, is counted 4 times.')}`),
+  concept('🕒','Store events, not current state',
+   `<p>Tempting: give each lead a <code class="inline">current_stage</code> column and update it. <b>Don't.</b> The moment you overwrite <code class="inline">mql</code> with <code class="inline">sql</code>, you destroy the <i>when</i> — and every interesting funnel question is a question about <i>when</i>.</p><p>Rule: <b>store what you can't rebuild (events), derive what you can (current state = the latest event).</b></p>${diagram('events')}`),
+  concept('✂️','Censoring — the trap that fools smart people',
+   `<p>A <b>censored</b> record is one whose measured event hasn't happened yet — a lead sitting in "SQL" has no "closed" date. Measure "average time to close" by subtracting timestamps and those still-open leads have nothing to subtract, so they <b>silently drop out</b>. Your average is computed only over leads that already closed — excluding exactly the stuck ones that prompted the question.</p>${diagram('censoring')}`),
+  concept('🧩','Lead ≠ Contact ≠ Customer ≠ Account',
+   `<p>These are not synonyms, and interviewers test it instantly:</p><ul><li><b>Lead</b> — a raw hand-raise. Might be junk, might be a duplicate.</li><li><b>Contact</b> — a known, de-duplicated person you can reach.</li><li><b>Customer</b> — someone who has paid. A <i>state a contact reaches</i>, not a separate species.</li><li><b>Account</b> — the <i>company</i>, not the person. One account holds many contacts.</li></ul>`)
+ ],
+ body:`
+  <p class="lead">Do not skip this module. Every mistake in funnel analytics is a modeling mistake wearing a SQL costume. Get the model right and the SQL becomes easy.</p>
+  ${diagram('funnel','The funnel we\'re modeling: leads enter at the top, a fraction survives each stage.')}
+  <p>The story: a company runs campaigns on several <b>channels</b> (Google, LinkedIn, webinars, organic). Campaigns cost money and produce <b>leads</b>, who move through the funnel; some become customers. We want to know where leads leak, what a customer costs, and which channel deserves the next dollar.</p>
+  ${callout('turn','Your turn','✍️',`<p>Say it out loud: in one sentence each, why is "we got 500 leads" a very different claim from "we got 500 customers"? And why might "cost per account" and "cost per lead" point to <i>opposite</i> decisions?</p>`)}
+ `,
+ checkpoint:`Without looking, you can define <b>grain</b>, explain <b>fan-out</b>, argue why <b>events</b> beat a current_stage column, and describe how <b>censoring</b> corrupts a naïve average.`
+},
+
+{num:'2',title:'Design the three tables',time:'90 min',tag:'The heart of the project',
+ concepts:[
+  concept('🗝️','Keys — primary and foreign',
+   `<p>A <b>primary key</b> is the column that uniquely names each row (e.g. <code class="inline">lead_id</code>). A <b>foreign key</b> is a column that points at another table's primary key (e.g. an event's <code class="inline">lead_id</code> points back to a real lead), letting the database enforce the relationship.</p>`)
+ ],
+ body:`
+  <p class="lead">Now you design the schema — the intellectual core. Resist peeking at the reference. The struggle <i>is</i> the education.</p>
+  <p>Three kinds of fact live in the story, which map to three tables:</p>
+  <ol><li><b>Who the leads are</b> and where each came from (fixed facts).</li><li><b>What happened to each lead over time</b> (funnel movement = events).</li><li><b>What we spent</b> to acquire them.</li></ol>
+  ${diagram('schema','A strong design. Note how the three tables sit at three different grains.')}
+  <h3 class="sub-h">Two tests to apply to every column</h3>
+  <ul><li><b>The change test:</b> does this fact ever change for a row? A lead's <i>source</i> doesn't change → it lives on the lead. A lead's <i>stage</i> changes → it's an event.</li><li><b>The grain test:</b> does this column stay true for every row at this grain, or force you to repeat data?</li></ul>
+  ${callout('turn','Your turn','✍️',`<p>For <b>each</b> table, write down on paper: (1) "one row = one ______" (the grain), (2) which columns belong and <i>why here and not elsewhere</i>, (3) the primary key, (4) any foreign key. Do this <b>before</b> opening the reference.</p>`)}
+  ${callout('tip','The casing trap — design it in on purpose','💡',`<p>Real CRM data is filthy: the same channel arrives as <code class="inline">Google</code>, <code class="inline">google</code>, <code class="inline">GOOGLE</code>, <code class="inline">Google Ads</code>. Store the <b>raw</b> source as it arrived; you'll learn to normalize it later. We'll dirty it deliberately in the data generator.</p>`)}
+  ${reveal('Reveal the reference three-table design + reasoning',`
+    <p>This is <i>a</i> strong design, not the only one. If yours differs but passes both tests, it may be just as defensible — that's the point.</p>
+    <h3 class="sub-h">leads — a dimension (fixed facts about each lead)</h3>
+    <p><b>Grain:</b> one row = one lead. <b>Columns:</b> <code class="inline">lead_id</code> (PK), <code class="inline">created_at</code>, <code class="inline">source_raw</code> (un-cleaned), <code class="inline">campaign</code>, <code class="inline">region</code>. There is deliberately <b>no current_stage</b> — stage changes, so it belongs in events.</p>
+    <h3 class="sub-h">lead_stage_events — a fact table (the movements)</h3>
+    <p><b>Grain:</b> one row = one lead entering one stage at one moment. A lead reaching four stages has four rows.</p>
+    ${diagram('grain')}
+    <p><b>Columns:</b> <code class="inline">event_id</code> (PK), <code class="inline">lead_id</code> (FK → leads), <code class="inline">stage</code> (a value: created/mql/sql/opportunity/closed_won/closed_lost), <code class="inline">event_at</code>. A stuck lead simply has <b>no</b> closed row — that absence <i>is</i> the censoring.</p>
+    <h3 class="sub-h">spend — a fact table (money over time)</h3>
+    <p><b>Grain:</b> one row = one channel on one day. <b>Columns:</b> <code class="inline">spend_id</code> (PK), <code class="inline">channel</code>, <code class="inline">spend_date</code>, <code class="inline">amount</code>, optional <code class="inline">impressions</code>/<code class="inline">clicks</code>.</p>
+    <p><b>Why spend is NOT a column on leads:</b> you spend on a <i>channel over time</i>, not on an individual lead. Cost-per-lead is a <b>ratio</b> you compute by rolling both tables up to a common grain — never a stored column.</p>
+  `)}
+  ${callout('turn','Your turn — write the CREATE TABLE statements','✍️',`<p>Each column needs a <b>type</b>: <code class="inline">INTEGER</code>, <code class="inline">TEXT</code>, <code class="inline">TIMESTAMP</code>, <code class="inline">DATE</code>, <code class="inline">NUMERIC</code> (money). Write all three yourself. Hit a syntax wall? Look up the specific piece — don't copy the whole thing.</p>`)}
+  ${reveal('Reveal reference DDL — with every clause explained',`
+    ${code('sql',`CREATE TABLE leads (
+    lead_id     INTEGER PRIMARY KEY,   -- unique + not null
+    created_at  TIMESTAMP NOT NULL,
+    source_raw  TEXT NOT NULL,         -- channel as it arrived, un-cleaned
+    campaign    TEXT,                  -- nullable: some leads have none
+    region      TEXT
+);
+
+CREATE TABLE lead_stage_events (
+    event_id  INTEGER PRIMARY KEY,
+    lead_id   INTEGER NOT NULL REFERENCES leads(lead_id),  -- FK
+    stage     TEXT NOT NULL,
+    event_at  TIMESTAMP NOT NULL
+);
+
+CREATE TABLE spend (
+    spend_id     INTEGER PRIMARY KEY,
+    channel      TEXT NOT NULL,
+    spend_date   DATE NOT NULL,
+    amount       NUMERIC(10,2) NOT NULL,  -- money: exact decimal, never float
+    impressions  INTEGER,
+    clicks       INTEGER
+);`)}
+    <ul>
+      <li><b>PRIMARY KEY</b> — guarantees unique + never null; how a single row is addressed.</li>
+      <li><b>NOT NULL</b> — the column is required; used for facts that must always exist.</li>
+      <li><b>REFERENCES leads(lead_id)</b> — a foreign key; Postgres now <i>refuses</i> an event pointing at a lead that doesn't exist.</li>
+      <li><b>NUMERIC(10,2)</b> — exact decimal for money. Never store money as floating point; rounding errors compound.</li>
+      <li><b>campaign/region are nullable</b> — real leads sometimes lack them; forcing a value would mean fabricating data.</li>
+    </ul>
+  `)}
+ `,
+ checkpoint:`Three empty tables exist. You can state the grain of each in one sentence and justify why each column sits where it sits — and why <code class="inline">current_stage</code> and a per-lead spend column do <b>not</b> exist.`
+},
+
+{num:'3',title:'Generate the data',time:'90 min',tag:'Build realistic fake data',
+ concepts:[
+  concept('🎲','Why generate your own data',
+   `<p>You don't have a real CRM, and building the generator yourself means you <i>control the truth</i>: you decide the real conversion rates, then check whether your queries recover them. If your query says LinkedIn converts at 4% and you built it to be 4%, your query is trustworthy — a rare luxury.</p>`)
+ ],
+ body:`
+  <p class="lead">Empty tables teach nothing. Your generator must bake in the phenomena the analysis depends on. Decide, before coding, how you'll produce each:</p>
+  <ol>
+    <li><b>A leaky funnel</b> — each stage passes only a fraction forward.</li>
+    <li><b>Channel-varying quality</b> — channels convert at different rates.</li>
+    <li><b>Time spread</b> — leads arrive across a date range (so cohorts exist).</li>
+    <li><b>Realistic delays</b> — later stages take longer.</li>
+    <li><b>Censoring on purpose</b> — recent leads haven't finished yet.</li>
+    <li><b>Dirty source casing</b> — emit each channel under several spellings.</li>
+    <li><b>Spend</b> that roughly tracks leads but is set per channel per day.</li>
+  </ol>
+  ${callout('turn','Your turn — plan the logic in words first','✍️',`<p>Write the algorithm in plain English before any Python: "For each of N leads, pick a created date; pick a channel; pick a messy spelling; emit a <code class="inline">created</code> event; then with probability p advance to MQL after a delay; … if a computed date is in the future, <b>don't emit it</b> (that's the censoring)."</p>`)}
+  <h3 class="sub-h">The only Python you need</h3>
+  <ul>
+    <li>A <b>variable</b> stores a value: <code class="inline">n_leads = 2000</code>.</li>
+    <li>A <b>loop</b> repeats: <code class="inline">for i in range(n_leads):</code>.</li>
+    <li><code class="inline">random.random()</code> gives 0–1 (compare to a probability); <code class="inline">random.choices(list, weights=…)</code> picks with weights.</li>
+    <li><code class="inline">timedelta(days=k)</code> does date math.</li>
+    <li>Python uses <b>indentation</b> to show what's inside a loop — misaligned spaces are the #1 beginner error.</li>
+  </ul>
+  ${callout('turn','Your turn — write generate_data.py','✍️',`<p>Produce three CSV files matching your grains. When it errors (it will), read the last line — it names the file, line, and problem — and fix that line. Run it with <code class="inline">python3 generate_data.py</code>.</p>`)}
+  ${reveal('Reveal reference generator — heavily commented',`
+    <p>Study the comments; they explain <i>why</i>, which is what you'll be asked about. Tune the numbers — owning them is part of owning the project.</p>
+    ${code('python',`import csv, random
+from datetime import datetime, timedelta
+
+random.seed(42)   # same "random" data every run -> reproducible
+
+N_LEADS = 2000
+START = datetime(2025, 1, 1)
+TODAY = datetime(2025, 7, 24)          # anything after this is the future
+DAYS = (TODAY - START).days
+
+# channels differ in VOLUME (weight) and QUALITY (multiplier)
+channels = {
+  "google":   {"weight":40,"quality":1.0,"spell":["google","Google","Google Ads","GOOGLE"]},
+  "linkedin": {"weight":25,"quality":1.4,"spell":["linkedin","LinkedIn","Linkedin"]},
+  "webinar":  {"weight":15,"quality":1.8,"spell":["webinar","Webinar","WEBINAR"]},
+  "organic":  {"weight":20,"quality":0.7,"spell":["organic","Organic","organic search"]},
+}
+names = list(channels)
+weights = [channels[c]["weight"] for c in names]
+
+BASE = {"mql":0.55,"sql":0.45,"opp":0.40,"won":0.30}   # the "truth"
+DELAY = {"mql":3,"sql":10,"opp":25,"closed":45}        # later stages take longer
+
+leads, events = [], []
+eid = 1
+for lid in range(1, N_LEADS+1):
+    created = START + timedelta(days=random.randint(0,DAYS), hours=random.randint(0,23))
+    ch = random.choices(names, weights=weights)[0]
+    src = random.choice(channels[ch]["spell"])   # the dirt
+    q = channels[ch]["quality"]
+    leads.append([lid, created.isoformat(), src,
+                  f"campaign_{random.randint(1,6)}",
+                  random.choice(["NA","EMEA","APAC"])])
+
+    def emit(stage, when):
+        global eid
+        if when > TODAY:          # CENSORING: future events don't exist yet
+            return False
+        events.append([eid, lid, stage, when.isoformat()]); eid += 1
+        return True
+
+    emit("created", created)
+    t = created
+    if random.random() < min(BASE["mql"]*q, 0.95):
+        t += timedelta(days=random.expovariate(1/DELAY["mql"]))
+        if not emit("mql", t): continue
+        if random.random() < min(BASE["sql"]*q, 0.95):
+            t += timedelta(days=random.expovariate(1/DELAY["sql"]))
+            if not emit("sql", t): continue
+            if random.random() < min(BASE["opp"]*q, 0.95):
+                t += timedelta(days=random.expovariate(1/DELAY["opp"]))
+                if not emit("opportunity", t): continue
+                t += timedelta(days=random.expovariate(1/DELAY["closed"]))
+                emit("closed_won" if random.random() < min(BASE["won"]*q,0.95) else "closed_lost", t)
+
+# SPEND: its own loop, its own grain (channel x day)
+spend = []; sid = 1; day = START
+budget = {"google":500,"linkedin":350,"webinar":150,"organic":40}
+while day <= TODAY:
+    for ch in names:
+        amt = round(budget[ch]*random.uniform(0.7,1.3), 2)
+        imp = int(amt*random.uniform(80,120)); clk = int(imp*random.uniform(0.01,0.04))
+        spend.append([sid, ch, day.date().isoformat(), amt, imp, clk]); sid += 1
+    day += timedelta(days=1)
+
+def write(name, header, rows):
+    with open(name,"w",newline="") as f:
+        w = csv.writer(f); w.writerow(header); w.writerows(rows)
+write("leads.csv", ["lead_id","created_at","source_raw","campaign","region"], leads)
+write("lead_stage_events.csv", ["event_id","lead_id","stage","event_at"], events)
+write("spend.csv", ["spend_id","channel","spend_date","amount","impressions","clicks"], spend)
+print(f"Wrote {len(leads)} leads, {len(events)} events, {len(spend)} spend rows.")`)}
+    <p>Worth being able to explain: <b>expovariate</b> gives delays that cluster small with a long tail (realistic, and why your duration averages skew); the <b>if when &gt; TODAY</b> line is the single most important one — it cuts recent leads off mid-funnel exactly like real in-flight leads; and <b>spend is a separate loop with its own grain</b>.</p>
+  `)}
+ `,
+ checkpoint:`Three CSV files exist. You can open <code class="inline">leads.csv</code> and see messy source spellings, and explain which line creates the censoring.`
+},
+
+{num:'4',title:'Load the data',time:'45 min',tag:'CSVs into Postgres',
+ concepts:[
+  concept('📥','COPY — bulk-load a CSV into a table',
+   `<p>Postgres's <code class="inline">COPY</code> command loads a CSV straight into a table, matching columns by position. Your CSV column order matches your table order by design, so this just works.</p>`)
+ ],
+ body:`
+  ${callout('turn','Your turn — load all three','✍️',`<p>Look up <code class="inline">COPY … FROM … WITH (FORMAT csv, HEADER)</code> and load each file. You'll need the absolute path — <code class="inline">pwd</code> prints your current folder. Load <b>leads before events</b> (the foreign key needs the leads to exist first).</p>`)}
+  ${reveal('Reveal reference load commands',`
+    ${code('sql',`-- Run inside psql. Replace /FULL/PATH/ with the output of pwd.
+COPY leads (lead_id, created_at, source_raw, campaign, region)
+FROM '/FULL/PATH/leads.csv' WITH (FORMAT csv, HEADER true);
+
+COPY lead_stage_events (event_id, lead_id, stage, event_at)
+FROM '/FULL/PATH/lead_stage_events.csv' WITH (FORMAT csv, HEADER true);
+
+COPY spend (spend_id, channel, spend_date, amount, impressions, clicks)
+FROM '/FULL/PATH/spend.csv' WITH (FORMAT csv, HEADER true);`)}
+    <p><b>Permissions error?</b> Server-side <code class="inline">COPY</code> needs Postgres itself to read the file. The always-works fix is psql's client-side <code class="inline">\\copy</code> (same syntax, reads the file as you), run from the folder holding the CSVs.</p>
+  `)}
+  ${callout('turn','Your turn — verify','✍️',`<p>Write three <code class="inline">SELECT COUNT(*) FROM …;</code> queries and confirm the counts match your generator's printout. Then eyeball ten rows: <code class="inline">SELECT * FROM leads LIMIT 10;</code></p>`)}
+ `,
+ checkpoint:`All three tables are populated, counts match the generator, and a <code class="inline">SELECT</code> returns real rows.`
+},
+
+{num:'5',title:'First funnel queries',time:'90 min',tag:'Learn SQL by answering real questions',
+ concepts:[
+  concept('🧱','The shape of every SQL query',
+   `<p>Every query has this skeleton. You write it top-to-bottom, but Postgres <i>executes</i> roughly FROM → WHERE → GROUP BY → SELECT → ORDER BY. Knowing that order explains most "why doesn't this work" confusion.</p>${code('sql',`SELECT   columns / calculations   -- what to show
+FROM     table                    -- start here
+JOIN     other ON ...             -- attach related rows
+WHERE    row filter               -- keep some rows
+GROUP BY columns                  -- collapse into groups
+ORDER BY columns                  -- sort`)}`),
+  concept('🔠','Normalize before you group',
+   `<p>Grouping on a raw, dirty source splits one channel into many. Normalizing the source into a clean channel <i>before</i> grouping is the kind of judgment that separates an analyst from someone who can type SQL. Do it every time and say why.</p>`)
+ ],
+ body:`
+  <p class="lead">Now you learn SQL by answering real questions. <b>Predict the answer before running each query</b> — that habit is how you catch wrong-but-plausible results.</p>
+  ${callout('turn','Your turn — leads by channel (the casing trap is live)','✍️',`<p>Run it the naïve way first and <i>see</i> the fracture; then fix it. You'll need <code class="inline">COUNT(*)</code>, <code class="inline">GROUP BY</code>, and a way to unify spellings.</p>`)}
+  ${reveal('Reveal — the naïve version, why it\'s wrong, and the fix',`
+    <p><b>Naïve (wrong)</b> — returns separate rows for <code class="inline">google</code>, <code class="inline">Google</code>, <code class="inline">GOOGLE</code>, <code class="inline">Google Ads</code>:</p>
+    ${code('sql',`SELECT source_raw, COUNT(*) AS lead_count
+FROM leads
+GROUP BY source_raw
+ORDER BY lead_count DESC;`)}
+    <p><b>The fix</b> — map every dirty spelling to one clean channel with <code class="inline">CASE</code>:</p>
+    ${code('sql',`SELECT
+  CASE
+    WHEN LOWER(source_raw) LIKE 'google%'   THEN 'google'
+    WHEN LOWER(source_raw) LIKE 'linkedin%' THEN 'linkedin'
+    WHEN LOWER(source_raw) LIKE 'webinar%'  THEN 'webinar'
+    WHEN LOWER(source_raw) LIKE 'organic%'  THEN 'organic'
+    ELSE 'other'
+  END AS channel,
+  COUNT(*) AS lead_count
+FROM leads
+GROUP BY 1          -- "1" = group by the first SELECT expression
+ORDER BY lead_count DESC;`)}
+    <p><code class="inline">CASE…END</code> is SQL's if/else; <code class="inline">LIKE 'google%'</code> matches anything starting with "google" (so it catches "google ads" too).</p>
+  `)}
+  ${callout('turn','Your turn — funnel stage counts','✍️',`<p>One number per stage: how many <i>distinct leads</i> ever entered it. You're counting leads, not events — use <code class="inline">COUNT(DISTINCT lead_id)</code>. Predict the order first: if SQL outnumbers MQL, something is impossible.</p>`)}
+  ${reveal('Reveal — stage counts',`
+    ${code('sql',`SELECT stage, COUNT(DISTINCT lead_id) AS leads_reaching_stage
+FROM lead_stage_events
+GROUP BY stage
+ORDER BY leads_reaching_stage DESC;`)}
+    <p><code class="inline">COUNT(DISTINCT lead_id)</code> counts unique leads — a safety belt against double-counting.</p>
+  `)}
+  ${callout('turn','Your turn — stage-to-stage conversion rates','✍️',`<p>A rate is the insight. Watch the integer-division gotcha: <code class="inline">5/2</code> is <code class="inline">2</code> in SQL unless one side is decimal.</p>`)}
+  ${reveal('Reveal — conversion rates with the division fix',`
+    ${code('sql',`SELECT
+  COUNT(DISTINCT lead_id) FILTER (WHERE stage='mql')::numeric
+    / COUNT(DISTINCT lead_id) FILTER (WHERE stage='created') AS created_to_mql,
+  COUNT(DISTINCT lead_id) FILTER (WHERE stage='sql')::numeric
+    / COUNT(DISTINCT lead_id) FILTER (WHERE stage='mql')     AS mql_to_sql,
+  COUNT(DISTINCT lead_id) FILTER (WHERE stage='opportunity')::numeric
+    / COUNT(DISTINCT lead_id) FILTER (WHERE stage='sql')     AS sql_to_opp
+FROM lead_stage_events;`)}
+    <p><code class="inline">FILTER (WHERE …)</code> counts only rows meeting a condition — several stage counts in one pass. <code class="inline">::numeric</code> casts the top of the fraction to decimal so it isn't integer division. These recovered rates should land near the <code class="inline">BASE</code> rates you built into the generator.</p>
+  `)}
+ `,
+ checkpoint:`You can produce clean per-channel lead counts, funnel stage counts, and conversion rates — and explain the normalization and the <code class="inline">::numeric</code> cast.`
+},
+
+{num:'6',title:'The judgment traps',time:'2.5 hrs',tag:'The interview centerpiece',
+ concepts:[
+  concept('✂️','Censored averages',`<p>An "average time to close" built by subtracting timestamps only includes leads that <i>have</i> closed — disproportionately the fast, old ones — and silently excludes every in-flight lead. The honest response isn't a different AVG; it's a <b>reframe</b>: state the population, report the censored count, and use a fixed window.</p>`),
+  concept('🎓','Cohort attribution & maturity',`<p><b>Cohort (created-date) attribution</b> credits a win back to the month the lead was <i>created</i>, lining the win up with the spend that caused it. But a cohort created last week can't have closed yet — comparing it to January raw makes it look terrible purely because it's <i>young</i>. Fix the <b>window</b>, not the number: measure every cohort at the same age.</p>${diagram('cohort')}`),
+  concept('🔮','Predictive metrics & drift',`<p>Apply a <b>mature</b> cohort's conversion rate to a young cohort's current volume to forecast its eventual customers. The one load-bearing assumption: <b>no drift</b> — the conditions that produced the mature rate still hold. Always name that assumption when you present a projection.</p>`)
+ ],
+ body:`
+  <p class="lead">This module is the reason the project is worth doing. Anyone can <code class="inline">GROUP BY</code>. The analyst is the person who <i>doesn't</i> report the naïve number. For each trap: compute the tempting-but-wrong version, see why it lies, then compute the honest one.</p>
+  <h3 class="sub-h">Trap 1 — "How long does it take to close?"</h3>
+  ${callout('turn','Your turn (the wrong way first)','✍️',`<p>Compute average days from <code class="inline">created</code> to <code class="inline">closed_won</code> by subtracting timestamps (a self-join of the events table). Then ask: <b>which leads are in this average, and which silently fell out?</b></p>`)}
+  ${reveal('Reveal — the naïve duration, why it lies, and the honest framing',`
+    ${code('sql',`SELECT AVG(EXTRACT(EPOCH FROM (won.event_at - c.event_at))/86400) AS avg_days
+FROM lead_stage_events c
+JOIN lead_stage_events won
+  ON won.lead_id = c.lead_id AND won.stage = 'closed_won'
+WHERE c.stage = 'created';`)}
+    <p><b>Why it lies:</b> the JOIN keeps only leads that <i>have</i> a <code class="inline">closed_won</code> row. Every in-flight lead is silently excluded, so this "average" is computed only over already-closed (fast, old) leads. It understates reality and ignores exactly the stuck leads that motivate the question.</p>
+    <p><b>The honest response is a reframe:</b> state the population ("mean time to close <i>among leads that have closed</i>"), report how many that is vs. still open, and to compare fairly use a fixed window — "of January's leads, what share closed <i>within 90 days</i>?" — so every lead gets the same chance.</p>
+  `)}
+  <h3 class="sub-h">Trap 2 — the join that inflates every total</h3>
+  ${callout('turn','Your turn','✍️',`<p>Try "total spend and total leads per channel" by joining <code class="inline">leads</code> to <code class="inline">spend</code> and summing. Predict the spend total, then compare to the true <code class="inline">SELECT SUM(amount) FROM spend;</code></p>`)}
+  ${reveal('Reveal — watch the total explode, and why',`
+    ${code('sql',`SELECT s.channel, SUM(s.amount) AS total_spend, COUNT(*) AS n
+FROM spend s
+JOIN leads l ON l.source_raw ILIKE s.channel || '%'
+GROUP BY s.channel;`)}
+    <p>The <code class="inline">SUM(s.amount)</code> here will be <b>hundreds of times</b> the real total. <b>Why:</b> spend has one row per channel-day; leads has many leads per channel. The join pairs every spend row with every matching lead, so each dollar is counted once per lead. <b>The fix is a mindset:</b> aggregate each side to a common grain <i>first</i>, then join the summaries. (You do exactly that in Module 7.)</p>
+  `)}
+  <h3 class="sub-h">Trap 3 — cohorts and maturity</h3>
+  ${callout('turn','Your turn','✍️',`<p>Group leads by created-month; for each cohort compute the share that closed won. Then spot the flaw and fix it by fixing the window.</p>`)}
+  ${reveal('Reveal — cohort conversion, the maturity flaw, and the fix',`
+    ${code('sql',`SELECT date_trunc('month', l.created_at) AS cohort_month,
+       COUNT(DISTINCT l.lead_id) AS cohort_size,
+       COUNT(DISTINCT won.lead_id)::numeric
+         / COUNT(DISTINCT l.lead_id) AS won_rate
+FROM leads l
+LEFT JOIN lead_stage_events won
+  ON won.lead_id = l.lead_id AND won.stage = 'closed_won'
+GROUP BY 1 ORDER BY 1;`)}
+    <p><code class="inline">LEFT JOIN</code> keeps every lead even if it never won (an inner join would drop the non-winners and destroy the denominator — a devastating, silent bug). <b>The flaw:</b> recent cohorts show a collapsing rate only because they haven't had <i>time</i> to close. <b>The fix</b> — measure at the same age and only include cohorts old enough:</p>
+    ${code('sql',`... LEFT JOIN lead_stage_events won
+      ON won.lead_id = l.lead_id
+     AND won.stage = 'closed_won'
+     AND won.event_at <= l.created_at + INTERVAL '90 days'
+WHERE l.created_at <= DATE '2025-07-24' - INTERVAL '90 days'`)}
+    <p>Now every included cohort has had a full 90-day chance. Quote it as the "90-day closed-won rate," never a bare "conversion rate."</p>
+  `)}
+ `,
+ checkpoint:`You can <i>demonstrate</i> each trap — run the wrong query, explain precisely what it miscounts, and produce the honest version. This is your interview centerpiece.`
+},
+
+{num:'7',title:'Cost & spend analysis',time:'90 min',tag:'Where the grain lessons pay off',
+ concepts:[
+  concept('🧮','Every cost metric is a cross-grain ratio',`<p>Cost per lead / per customer = spend ÷ count, from two tables of <i>different grain</i>. So every one requires <b>aggregate-then-join</b>: roll each side to a common grain (channel) first, then divide. This is how you avoid the fan-out from Module 6.</p>`),
+  concept('📉','Marginal vs. average cost',`<p><b>Average</b> cost per customer says how you did; it does <i>not</i> say what to do next, because spending more reaches a worse audience — the next dollar finds fence-sitters. The <b>marginal</b> cost of the next customer is higher. Decision rule: spend up to where marginal cost ≈ the value of a customer. A rising average usually means <b>spend less, not kill the channel.</b></p>`)
+ ],
+ body:`
+  ${callout('turn','Your turn — cost per lead, done right','✍️',`<p>Use a <b>CTE</b> (<code class="inline">WITH name AS (…)</code>, a named temporary result): build spend-per-channel and leads-per-channel separately (normalizing the dirty source!), then join those summaries and divide.</p>`)}
+  ${reveal('Reveal — cost per lead via aggregate-then-join',`
+    ${code('sql',`WITH spend_by_channel AS (        -- grain: one row per channel
+  SELECT channel, SUM(amount) AS total_spend
+  FROM spend GROUP BY channel
+),
+leads_by_channel AS (             -- grain: one row per channel (normalized!)
+  SELECT
+    CASE
+      WHEN LOWER(source_raw) LIKE 'google%'   THEN 'google'
+      WHEN LOWER(source_raw) LIKE 'linkedin%' THEN 'linkedin'
+      WHEN LOWER(source_raw) LIKE 'webinar%'  THEN 'webinar'
+      WHEN LOWER(source_raw) LIKE 'organic%'  THEN 'organic'
+      ELSE 'other'
+    END AS channel,
+    COUNT(*) AS lead_count
+  FROM leads GROUP BY 1
+)
+SELECT s.channel, s.total_spend, l.lead_count,
+       ROUND(s.total_spend / l.lead_count, 2) AS cost_per_lead
+FROM spend_by_channel s
+JOIN leads_by_channel l ON l.channel = s.channel
+ORDER BY cost_per_lead DESC;`)}
+    <p>Each CTE collapses its table to <b>one row per channel</b> — a shared grain. Only then do we join, so one spend total meets one lead count. No fan-out.</p>
+  `)}
+  ${callout('turn','Your turn — cost per customer','✍️',`<p>Replace "leads per channel" with "closed-won <i>customers</i> per channel". Predict: will webinar's cost <i>per customer</i> be relatively better or worse than its cost <i>per lead</i>? (Recall you built webinar to convert at higher quality.)</p>`)}
+  ${reveal('Reveal — cost per customer and the interpretation',`
+    <p>Swap the second CTE to count wins by channel, then divide <code class="inline">total_spend / customers</code>. <b>Interpretation:</b> a channel can have a high cost per <i>lead</i> but a low cost per <i>customer</i> if its leads convert well (webinar, by construction). The reverse — cheap leads, expensive customers — is the classic trap of buying junk leads that never close. <b>Cost per customer is closer to the decision</b>, because customers, not leads, pay you.</p>
+  `)}
+  ${callout('turn','Your turn — diminishing returns (analysis, not just SQL)','✍️',`<p>Split each channel's history into an early vs. later period, compute cost per customer in each, and see whether the later/higher-spend period costs more — evidence of diminishing returns. Then write the recommendation in <b>business terms</b>.</p>`)}
+  ${reveal('Reveal — how to read it',`
+    <p>If cost per customer <b>rises</b> in the higher-spend half, you're seeing diminishing returns. <b>The recommendation is rarely "kill the channel"</b> — a rising average usually means <i>pull back</i> to where the margin is healthy. Say it like a senior analyst: "LinkedIn's marginal cost per customer in the high-spend period ($X) exceeds our ~$Y customer value, so I'd cap LinkedIn near the level where it was still under $Y and reallocate to webinar, whose marginal cost is still below value."</p>
+  `)}
+ `,
+ checkpoint:`You can compute cost per lead and per customer without fan-out, and articulate marginal-vs-average and turn it into a spend recommendation.`
+},
+
+{num:'8',title:'Build the console',time:'2 hrs',tag:'Ship the deliverable',
+ concepts:[
+  concept('🚀','This site IS the deployment target',`<p>The page you're reading is served from GitHub Pages out of the <code class="inline">docs/</code> folder. To publish your finished console, you (or your helper) replace <code class="inline">docs/index.html</code> with the console's HTML and push — Pages redeploys automatically in about a minute. No re-configuration.</p>`)
+ ],
+ body:`
+  <p class="lead">The deliverable that makes this portfolio-ready: a single page that tells the funnel story. Design it as a narrative, top to bottom:</p>
+  <ol>
+    <li><b>The funnel</b> — stage counts and conversion rates.</li>
+    <li><b>Channel scorecard</b> — leads, customers, cost per lead, cost per customer.</li>
+    <li><b>Cohort view</b> — the 90-day conversion by cohort month, with young cohorts marked.</li>
+    <li><b>Judgment callouts</b> — short notes stating the censoring caveat, the normalization, and the marginal-cost recommendation. <b>These prove you understand the numbers.</b></li>
+  </ol>
+  <h3 class="sub-h">Two honest options</h3>
+  <div class="tbl-wrap"><table class="data"><tr><th>Option</th><th>What</th><th>When</th></tr>
+    <tr><td><b>A — static (recommended)</b></td><td>Run your Module 5–7 queries, paste the numbers into a self-contained HTML page.</td><td>Meets the deadline; fully in your control; you can explain every figure.</td></tr>
+    <tr><td>B — export-driven</td><td>Postgres writes results to CSV; the page reads them.</td><td>Only if you're ahead of schedule.</td></tr>
+  </table></div>
+  ${callout('turn','Your turn — assemble the numbers, then the page','✍️',`<p>First produce a small results table for each of the four sections by running your queries. <i>Then</i> build the page. When you're ready to publish, ask for help turning your assembled HTML into a live console — the words and numbers must be yours; layout and publishing are fair game.</p>`)}
+ `,
+ checkpoint:`A single page exists that a stranger could read and understand your funnel, your channel economics, and — critically — the caveats.`
+},
+
+{num:'9',title:'Interview defense drills',time:'ongoing',tag:'Prove you can defend it',
+ concepts:[],
+ body:`
+  <p class="lead">The project's whole purpose is that you can defend it. Answer each of these <b>out loud, without looking</b>. If you stumble, that's your signal to re-read the module — before the interview, not during.</p>
+  <h3 class="sub-h">On modeling</h3>
+  <ol><li>What is the grain of each of your three tables? Why those grains?</li><li>Why is there no <code class="inline">current_stage</code> column on leads? What did that buy you?</li><li>Why are funnel stages values in a column instead of separate tables?</li><li>Why does spend live in its own table at its own grain?</li></ol>
+  <h3 class="sub-h">On the traps</h3>
+  <ol start="5"><li>Your "average days to close" — which leads does it include, which does it silently exclude, and in which direction is it biased?</li><li>Show me a join that inflates total spend. Why? How do you prevent it?</li><li>January vs. last-week cohorts show very different conversion. How much is real vs. maturity? How do you separate them?</li><li>You group leads by source and Google appears four times. What happened, what's the fix?</li></ol>
+  <h3 class="sub-h">On the economics</h3>
+  <ol start="9"><li>Cost per lead vs. cost per customer — which drives a channel decision, and why can they disagree?</li><li>Average cost per customer is $180 and rising. Do you kill the channel? What number would you actually decide on?</li><li>Forecast the June cohort's eventual customers. How? What single assumption makes it valid or worthless?</li></ol>
+  <h3 class="sub-h">On the craft</h3>
+  <ol start="12"><li>Walk me through one query line by line — any of them. If you can't, you copied it. Go rebuild it until you can.</li></ol>
+  ${callout('tip','The whole point','💡',`<p>If you can answer all twelve without notes, you don't just have a project — you have a story you own. That's what gets remembered in the room.</p>`)}
+ `,
+ checkpoint:`You can answer all twelve drills out loud, without notes.`
+}
+];
+
+/* ---------- progress state ---------- */
+const KEY='mfa_progress_v1';
+let state=JSON.parse(localStorage.getItem(KEY)||'{"read":{},"done":{}}');
+function save(){localStorage.setItem(KEY,JSON.stringify(state));}
+const ALL_CONCEPTS=MODULES.flatMap(m=>m.concepts.map(c=>c.id));
+function conceptsRead(){return ALL_CONCEPTS.filter(id=>state.read[id]).length;}
+function moduleConceptsRead(m){return m.concepts.filter(c=>state.read[c.id]).length;}
+function moduleStatus(m){
+  if(state.done[m.num])return 'done';
+  const anyRead=m.concepts.some(c=>state.read[c.id]);
+  return anyRead?'ip':'ns';
+}
+function overallPct(){
+  const total=ALL_CONCEPTS.length+MODULES.length;               // concepts + checkpoints
+  const got=conceptsRead()+MODULES.filter(m=>state.done[m.num]).length;
+  return Math.round(got/total*100);
+}
+
+/* ---------- render ---------- */
+const view=document.getElementById('view');
+const nav=document.getElementById('nav');
+
+function renderNav(){
+  const route=location.hash||'#/dash';
+  nav.innerHTML=`<div class="nav-h">Overview</div>`+
+    `<a class="nav-item ${route==='#/dash'?'active':''}" href="#/dash"><span class="ix">◆</span> Dashboard</a>`+
+    `<div class="nav-h">Modules</div>`+
+    MODULES.map(m=>{
+      const r=`#/m/${m.num}`;
+      return `<a class="nav-item ${route===r?'active':''} ${state.done[m.num]?'done':''}" href="${r}"><span class="ix">${m.num}</span> ${m.title}<span class="tick">✓</span></a>`;
+    }).join('');
+  document.getElementById('sp-pct').textContent=overallPct()+'%';
+  document.getElementById('sp-bar').style.width=overallPct()+'%';
+}
+
+function renderDash(){
+  const pct=Math.round(conceptsRead()/ALL_CONCEPTS.length*100);
+  const R=78,C=2*Math.PI*R,off=C*(1-pct/100);
+  const modsDone=MODULES.filter(m=>state.done[m.num]).length;
+  const remaining=ALL_CONCEPTS.length-conceptsRead();
+  // find first not-done module
+  const next=MODULES.find(m=>!state.done[m.num])||MODULES[0];
+  view.innerHTML=`
+    <span class="eyebrow">Your progress</span>
+    <h1 class="page">Marketing Funnel Analytics</h1>
+    <p class="sub">Learn the data modeling, SQL, and analyst judgment to build a defensible marketing-funnel project — everything in one place, at your pace.</p>
+    <div class="dash-hero">
+      <div class="ring">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4c63e6"/><stop offset="1" stop-color="#8a5cf6"/></linearGradient></defs>
+          <circle class="rc" cx="90" cy="90" r="${R}"/>
+          <circle class="rp" cx="90" cy="90" r="${R}" stroke-dasharray="${C}" stroke-dashoffset="${off}"/>
+        </svg>
+        <div class="ctr"><b>${pct}%</b><span>concepts read</span></div>
+      </div>
+      <div class="hero-stats">
+        <h2>${remaining===0?'All concepts read — nice.':remaining+' concept'+(remaining===1?'':'s')+' left to read'}</h2>
+        <div class="stat-row">
+          <div class="stat"><b>${conceptsRead()}/${ALL_CONCEPTS.length}</b><span>Concepts read</span></div>
+          <div class="stat"><b>${modsDone}/${MODULES.length}</b><span>Modules complete</span></div>
+          <div class="stat"><b>${overallPct()}%</b><span>Course overall</span></div>
+        </div>
+        <a class="cont-btn" href="#/m/${next.num}">${modsDone===0?'Start with Module 0 →':'Continue: Module '+next.num+' — '+next.title+' →'}</a>
+      </div>
+    </div>
+    <h2 class="sec">Modules</h2>
+    <div class="mod-grid">
+      ${MODULES.map(m=>{
+        const st=moduleStatus(m);
+        const pill=st==='done'?'<span class="pill dn">Done</span>':st==='ip'?'<span class="pill ip">In progress</span>':'<span class="pill ns">Not started</span>';
+        const cr=moduleConceptsRead(m),ct=m.concepts.length;
+        const barPct=ct?Math.round(cr/ct*100):(state.done[m.num]?100:0);
+        return `<div class="mod-card ${st==='done'?'done':''}" data-go="#/m/${m.num}">
+          <div class="mc-top"><span class="mc-ix">${m.num}</span>${pill}</div>
+          <h3>${m.title}</h3><p>${m.tag}</p>
+          <div class="mc-bar"><span style="width:${barPct}%"></span></div>
+          <div class="mc-meta"><span>${ct?cr+'/'+ct+' concepts':'—'}</span><span>${m.time}</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderModule(num){
+  const i=MODULES.findIndex(m=>m.num===num);
+  const m=MODULES[i];
+  if(!m){location.hash='#/dash';return;}
+  const conceptHTML=m.concepts.map(c=>{
+    const read=!!state.read[c.id];
+    return `<div class="concept ${read?'read':''}" id="${c.id}">
+      <div class="c-head"><span class="c-emoji">${c.emoji}</span><h3>${c.title}</h3>
+      <button class="read-btn" data-read="${c.id}">${read?'✓ Read':'Mark as read'}</button></div>
+      ${c.html}</div>`;
+  }).join('');
+  const cp=state.done[m.num];
+  const prev=MODULES[i-1],next=MODULES[i+1];
+  view.innerHTML=`
+    <span class="eyebrow">Module ${m.num} · ${m.time}</span>
+    <h1 class="page">${m.title}</h1>
+    <p class="sub">${m.tag}</p>
+    ${conceptHTML}
+    ${m.body}
+    <div class="checkpoint ${cp?'is-done':''}">
+      <div class="k">✓ Checkpoint</div>
+      <div>${m.checkpoint}</div>
+      <button class="done-btn" data-done="${m.num}">${cp?'✓ Module complete — click to undo':'Mark module complete'}</button>
+    </div>
+    <div class="mod-nav">
+      ${prev?`<a href="#/m/${prev.num}"><small>← Previous</small><b>${prev.title}</b></a>`:`<a href="#/dash"><small>←</small><b>Dashboard</b></a>`}
+      ${next?`<a class="nx" href="#/m/${next.num}"><small>Next →</small><b>${next.title}</b></a>`:`<a class="nx" href="#/dash"><small>Finish →</small><b>Back to Dashboard</b></a>`}
+    </div>`;
+  window.scrollTo(0,0);
+}
+
+function route(){
+  const h=location.hash||'#/dash';
+  if(h.startsWith('#/m/'))renderModule(h.slice(4));
+  else renderDash();
+  renderNav();
+  closeSidebar();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',e=>{
+  const rb=e.target.closest('[data-read]');
+  if(rb){const id=rb.getAttribute('data-read');state.read[id]=!state.read[id];if(!state.read[id])delete state.read[id];save();route();return;}
+  const db=e.target.closest('[data-done]');
+  if(db){const n=db.getAttribute('data-done');state.done[n]=!state.done[n];if(!state.done[n])delete state.done[n];save();route();return;}
+  const cp=e.target.closest('.copy');
+  if(cp){const t=decodeURIComponent(cp.getAttribute('data-code'));navigator.clipboard.writeText(t).then(()=>{const o=cp.textContent;cp.textContent='Copied ✓';setTimeout(()=>cp.textContent=o,1200);});return;}
+  const card=e.target.closest('[data-go]');
+  if(card){location.hash=card.getAttribute('data-go');return;}
+});
+document.getElementById('reset-btn').addEventListener('click',()=>{
+  if(confirm('Reset all progress? This clears every "read" and "complete" mark.')){state={read:{},done:{}};save();route();}
+});
+/* theme */
+const tkey='mfa_theme';
+function applyTheme(t){
+  if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);
+  else document.documentElement.removeAttribute('data-theme');
+}
+applyTheme(localStorage.getItem(tkey)||'auto');
+document.getElementById('theme-btn').addEventListener('click',()=>{
+  const cur=localStorage.getItem(tkey)||'auto';
+  const nextT=cur==='auto'?'light':cur==='light'?'dark':'auto';
+  localStorage.setItem(tkey,nextT);applyTheme(nextT);
+});
+/* sidebar (mobile) */
+const sidebar=document.getElementById('sidebar'),scrim=document.getElementById('scrim');
+function closeSidebar(){sidebar.classList.remove('open');scrim.classList.remove('show');}
+document.getElementById('burger').addEventListener('click',()=>{sidebar.classList.toggle('open');scrim.classList.toggle('show');});
+scrim.addEventListener('click',closeSidebar);
+
+window.addEventListener('hashchange',route);
+route();
+</script>
 </body>
 </html>
