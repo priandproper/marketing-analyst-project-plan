@@ -390,26 +390,142 @@ const MODULES=[
  checkpoint:`You can start Postgres, connect to <b>marketing_funnel</b>, run <code class="inline">SELECT 1;</code> and see a result.`
 },
 
-{num:'1',title:'The mental model',time:'45 min',tag:'The ideas everything rests on',
+{num:'1',title:'The mental model',time:'40 min',tag:'The five ideas everything rests on',
  concepts:[
   concept('🎯','Grain — what one row means',
-   `<p><b>Grain = what a single row of a table represents.</b> Before making any table, finish this sentence: "one row here is exactly one ______."</p><p>Why it rules everything: if you're fuzzy on the grain, every count, average and ratio downstream is quietly wrong — and <b>no error message ever warns you.</b> The query runs, the number looks fine, and it's garbage.</p>`),
+   `<p class="lead"><b>Grain is the most important word in this entire project.</b> If you remember one idea from today, remember this one — every other mistake we cover is, underneath, a grain mistake.</p>
+    <p><b>Definition.</b> The grain of a table is the answer to one question: <i>"what does a single row represent?"</i> — stated as one precise noun. Look at how different these are:</p>
+    <ul>
+      <li>"One row is one <b>lead</b>."</li>
+      <li>"One row is one <b>lead entering one stage</b>."</li>
+      <li>"One row is one <b>channel on one day</b>."</li>
+    </ul>
+    <p>Those are three different grains, and the differences are not academic — they decide whether your numbers are true.</p>
+    <h3 class="sub-h">An analogy you already know</h3>
+    <p>Think of any spreadsheet you have ever built. Before you typed a single row, you knew — without saying it out loud — what a row <i>was</i>: one expense, one student, one order. That silent knowledge is the grain. A database only differs in one way: unlike your spreadsheet, it will happily let you mix two grains in a single calculation and then hand you a confident, wrong answer with no warning.</p>
+    <h3 class="sub-h">Watch a fuzzy grain destroy a number</h3>
+    <p>Suppose you believe your events table is "one row per lead." It is actually "one row per lead per stage." Here is lead #5 in that table:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>event_id</th><th>lead_id</th><th>stage</th><th>event_at</th></tr>
+      <tr><td>101</td><td>5</td><td>created</td><td>Mar 1</td></tr>
+      <tr><td>102</td><td>5</td><td>mql</td><td>Mar 4</td></tr>
+      <tr><td>103</td><td>5</td><td>sql</td><td>Mar 15</td></tr>
+    </table></div>
+    <p>You run <code class="inline">COUNT(*)</code> to "count leads." For this one lead you get <b>3</b>. Across your file you proudly report <b>6,000 leads</b> when there are only 2,000. Your VP asks why leads tripled overnight. Nothing errored. It was valid SQL. You counted the wrong thing because you were wrong about what a row <i>is</i>.</p>
+    <p>The right way to count leads <i>from this table</i> is <code class="inline">COUNT(DISTINCT lead_id)</code> — precisely because the grain is per-event, not per-lead. <b>You cannot know which to write until you know the grain.</b></p>
+    <h3 class="sub-h">The grain test — run it on every table you touch</h3>
+    <p>Before you trust any table, finish this sentence aloud: <i>"One row in this table is exactly one ______."</i> If you can't fill the blank with one clean noun, you don't understand the table yet — and every total you build on it is a guess wearing a lab coat.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"The first thing I pin down for any table is its grain — what one row represents — because grain decides whether a COUNT counts what I think, and whether a JOIN will fan out. Most silent data bugs are grain bugs."</p>`)}`),
+
   concept('💥','Fan-out — the silent inflator',
-   `<p>Joining a table where one row = one lead to a table where one lead has <i>many</i> rows multiplies your rows. Sum anything afterward and it's inflated — with no error raised.</p>${diagram('fanout','A single $500 spend row, paired with 4 leads, is counted 4 times.')}`),
+   `<p>Fan-out is what happens when you <b>join two tables of different grain and then add something up.</b> The join multiplies rows, so your sum is multiplied too. No error is raised — the total is just quietly, hugely wrong.</p>
+    ${diagram('fanout','A single $500 spend row, matched to 4 leads, gets counted 4 times.')}
+    <h3 class="sub-h">Watch the money triple</h3>
+    <p>You want "total spend per channel." You join <code class="inline">spend</code> (grain: one row per channel per day) to <code class="inline">leads</code> (grain: many leads per channel) and sum the amount. Here is what the join actually builds for one $500 Google spend row:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>spend row</th><th>joined lead</th><th>amount counted</th></tr>
+      <tr><td>google · $500</td><td>lead 1</td><td>$500</td></tr>
+      <tr><td>google · $500</td><td>lead 2</td><td>$500</td></tr>
+      <tr><td>google · $500</td><td>lead 3</td><td>$500</td></tr>
+      <tr><td>google · $500</td><td>lead 4</td><td>$500</td></tr>
+    </table></div>
+    <p>One $500 row became <b>$2,000</b> because Google had four leads that day. With hundreds of leads per channel, your "total spend" comes back hundreds of times too big. The number looks impressive. It is fiction.</p>
+    <h3 class="sub-h">How to catch it, and how to prevent it</h3>
+    <p><b>Catch it:</b> before summing after a join, run <code class="inline">COUNT(*)</code> on the joined result. If it's larger than the number of rows in either original table, you've fanned out. Also: sanity-check the total against a known truth (<code class="inline">SELECT SUM(amount) FROM spend</code>). If they disagree by a wild multiple, you fanned out.</p>
+    <p><b>Prevent it:</b> never join two fact tables of different grain and then aggregate. Instead <b>aggregate each side to a common grain first, then join the summaries.</b> You'll do exactly this in Module 7. Write it on a sticky note: <i>aggregate, then join — never join, then aggregate across grains.</i></p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"Whenever I join tables of different grain, I ask whether the join could duplicate rows. If it can, I aggregate to a shared grain before joining, because otherwise every SUM downstream is inflated and nothing warns me."</p>`)}`),
+
   concept('🕒','Store events, not current state',
-   `<p>Tempting: give each lead a <code class="inline">current_stage</code> column and update it. <b>Don't.</b> The moment you overwrite <code class="inline">mql</code> with <code class="inline">sql</code>, you destroy the <i>when</i> — and every interesting funnel question is a question about <i>when</i>.</p><p>Rule: <b>store what you can't rebuild (events), derive what you can (current state = the latest event).</b></p>${diagram('events')}`),
+   `<p>Here is the tempting shortcut: give each lead a <code class="inline">current_stage</code> column and update it as the lead moves. It feels efficient. <b>It quietly throws away your most valuable data.</b></p>
+    <p>The moment you overwrite <code class="inline">mql</code> with <code class="inline">sql</code> in that column, you have erased <i>when</i> the lead was an MQL, and whether it was ever an MQL at all. And almost every question worth asking about a funnel is a question about <i>when</i>.</p>
+    ${diagram('events')}
+    <h3 class="sub-h">The questions a current_stage column can never answer</h3>
+    <ul>
+      <li>How long does MQL → SQL take on average? <i>(needs both timestamps)</i></li>
+      <li>How did leads created in March convert compared to April? <i>(needs the created date preserved)</i></li>
+      <li>How many leads are stuck in "SQL" and for how long? <i>(needs the SQL-entry time)</i></li>
+      <li>What did our funnel look like on June 1st? <i>(needs history, which was overwritten)</i></li>
+    </ul>
+    <p>An events table answers all four. A <code class="inline">current_stage</code> column answers none — the history it would need was destroyed on every update.</p>
+    <h3 class="sub-h">The principle: store what you can't rebuild, derive what you can</h3>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Fact</th><th>Store or derive?</th><th>Why</th></tr>
+      <tr><td>"Lead 5 entered SQL on Mar 15"</td><td><b>Store</b> (an event)</td><td>Once lost, it can never be reconstructed.</td></tr>
+      <tr><td>"Lead 5's current stage"</td><td><b>Derive</b></td><td>It's just the lead's latest event — computable any time.</td></tr>
+    </table></div>
+    <p>Current state is always the <i>latest event</i>, so you never need to store it. You need the events, and the events give you the state for free.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"I model the funnel as an event log, not a status column. Events are append-only and preserve the full timeline, so I can reconstruct the state at any date and measure durations. A current-stage column would overwrite exactly the history the analysis needs."</p>`)}`),
+
   concept('✂️','Censoring — the trap that fools smart people',
-   `<p>A <b>censored</b> record is one whose measured event hasn't happened yet — a lead sitting in "SQL" has no "closed" date. Measure "average time to close" by subtracting timestamps and those still-open leads have nothing to subtract, so they <b>silently drop out</b>. Your average is computed only over leads that already closed — excluding exactly the stuck ones that prompted the question.</p>${diagram('censoring')}`),
+   `<p>A record is <b>censored</b> when the event you're trying to measure <i>hasn't happened yet.</i> A lead sitting in "SQL" today has no "closed" date — not because it failed, but because it isn't finished.</p>
+    ${diagram('censoring')}
+    <h3 class="sub-h">Watch a careful analyst report a wrong number</h3>
+    <p>Your VP asks: "On average, how long does it take a lead to close?" You compute it by subtracting each lead's created date from its closed date. Here are five leads today:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Lead</th><th>Created</th><th>Closed?</th><th>Days to close</th></tr>
+      <tr><td>A</td><td>Jan 1</td><td>Jan 21</td><td>20</td></tr>
+      <tr><td>B</td><td>Jan 5</td><td>Feb 14</td><td>40</td></tr>
+      <tr><td>C</td><td>Mar 1</td><td>still open</td><td>— (no date to subtract)</td></tr>
+      <tr><td>D</td><td>Apr 1</td><td>still open</td><td>— (no date to subtract)</td></tr>
+      <tr><td>E</td><td>May 1</td><td>still open</td><td>— (no date to subtract)</td></tr>
+    </table></div>
+    <p>The subtraction only works for A and B, so your query silently uses only those two: <b>(20 + 40) / 2 = 30 days.</b> You report "we close in about 30 days."</p>
+    <p>But look what you excluded: C, D, and E — the three leads that have <i>already</i> been open longer and are dragging on. Your "30 days" is computed only over the leads that closed <b>fast enough to have closed at all.</b> Reality is slower, and you have <b>understated it</b> — and dropped the exact stuck leads that made the VP ask the question.</p>
+    <h3 class="sub-h">The honest fix is not a different average — it's a reframe</h3>
+    <p>Two moves rescue you: (1) always state the population — "average among leads that have <i>closed</i>," and report how many are still open. (2) To compare fairly, fix a <b>window</b>: "of leads created in January, what share closed <i>within 90 days</i>?" Every lead gets the same 90-day chance, so nobody is silently dropped. You'll build exactly this in Module 6.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"Any duration or conversion metric has to account for censoring — records that haven't reached the outcome yet. If I subtract timestamps naively, I silently exclude in-flight records and bias the result toward the fast ones. I fix it with a fixed measurement window so every record is judged over the same horizon."</p>`)}`),
+
   concept('🧩','Lead ≠ Contact ≠ Customer ≠ Account',
-   `<p>These are not synonyms, and interviewers test it instantly:</p><ul><li><b>Lead</b> — a raw hand-raise. Might be junk, might be a duplicate.</li><li><b>Contact</b> — a known, de-duplicated person you can reach.</li><li><b>Customer</b> — someone who has paid. A <i>state a contact reaches</i>, not a separate species.</li><li><b>Account</b> — the <i>company</i>, not the person. One account holds many contacts.</li></ul>`)
+   `<p>These four words get used interchangeably in casual conversation, and interviewers test the distinction within the first five minutes because it reveals whether you actually think about data or just repeat marketing slogans.</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Word</th><th>What it is</th><th>Watch out for</th></tr>
+      <tr><td><b>Lead</b></td><td>A raw hand-raise — someone filled a form, downloaded something.</td><td>Might be junk, a bot, or a duplicate of someone you already know.</td></tr>
+      <tr><td><b>Contact</b></td><td>A known, de-duplicated person you can actually reach.</td><td>One contact may have generated several leads over time.</td></tr>
+      <tr><td><b>Customer</b></td><td>Someone who has paid.</td><td>It's a <i>state a contact reaches</i>, not a separate table or species.</td></tr>
+      <tr><td><b>Account</b></td><td>The <i>company</i>, not the person.</td><td>One account holds many contacts — a whole buying committee.</td></tr>
+    </table></div>
+    <h3 class="sub-h">Why this is a counting problem, not a vocabulary quiz</h3>
+    <p>Say the same human, Priya at Acme Corp, downloaded two whitepapers and later attended a webinar under a slightly different email. Your raw data now has <b>three leads</b>. If you count leads, Acme looks like three prospects. If you resolve identity, it's <b>one contact</b> at <b>one account</b>. "We generated 3,000 leads" and "we reached 1,100 companies" can describe the exact same reality — and they lead to different budgets.</p>
+    <p>This is called <b>identity resolution</b>: the same human (or company) can exist many times across your systems, and someone has to decide when two records are "the same." For this project we keep it simple — one lead = one row — but you should be able to name the issue, because it's the first thing that breaks when marketing data meets sales data.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"Lead, contact, customer, and account sit at four different grains. Before I report any count I ask which one the question means, because 'we got 500 leads' and 'we won 500 customers' differ by orders of magnitude — and duplicates across systems make even the lead count a judgment call."</p>`)}`)
  ],
  body:`
-  <p class="lead">Do not skip this module. Every mistake in funnel analytics is a modeling mistake wearing a SQL costume. Get the model right and the SQL becomes easy.</p>
-  ${diagram('funnel','The funnel we\'re modeling: leads enter at the top, a fraction survives each stage.')}
-  <p>The story: a company runs campaigns on several <b>channels</b> (Google, LinkedIn, webinars, organic). Campaigns cost money and produce <b>leads</b>, who move through the funnel; some become customers. We want to know where leads leak, what a customer costs, and which channel deserves the next dollar.</p>
-  ${callout('turn','Your turn','✍️',`<p>Say it out loud: in one sentence each, why is "we got 500 leads" a very different claim from "we got 500 customers"? And why might "cost per account" and "cost per lead" point to <i>opposite</i> decisions?</p>`)}
+  <p class="lead">Don't skip this module or skim it. Every mistake in funnel analytics is a modeling mistake wearing a SQL costume. Nail the model here and the SQL in later modules becomes almost mechanical — you'll be typing out decisions you already made.</p>
+  <h2 class="sec">The business story we're modeling</h2>
+  <p>Picture a mid-size B2B software company — call it <b>Northwind</b>. Northwind spends money every day on four <b>channels</b>: Google Ads, LinkedIn, a webinar program, and organic search. That spend produces <b>leads</b> — people who raised a hand. Leads then move through a <b>funnel</b>, and at each step most of them drop away:</p>
+  ${diagram('funnel','Leads enter at the top; a fraction survives each stage. The narrowing is the story.')}
+  <p>The stages, in plain English:</p>
+  <ul>
+    <li><b>Created</b> — a lead exists. Someone filled a form.</li>
+    <li><b>MQL</b> (Marketing Qualified Lead) — marketing thinks they're worth sales' time.</li>
+    <li><b>SQL</b> (Sales Qualified Lead) — a salesperson agrees and takes them on.</li>
+    <li><b>Opportunity</b> — a real deal with a dollar figure attached.</li>
+    <li><b>Closed Won / Closed Lost</b> — they bought, or they walked.</li>
+  </ul>
+  <p>Three business questions drive everything we build:</p>
+  <ol>
+    <li><b>Where do leads leak?</b> Which stage loses the most, and is that normal or a problem?</li>
+    <li><b>What does a customer cost?</b> Not a lead — a paying <i>customer</i>, per channel.</li>
+    <li><b>Where should the next dollar go?</b> Which channel is still worth more spend, and which is tapped out?</li>
+  </ol>
+  <p>Every one of those is a trap if you don't respect grain, events, and censoring. That's why this module comes first.</p>
+
+  <h2 class="sec">The five ideas, and how they chain together</h2>
+  <p>The concept cards above aren't a random list — they're a chain. <b>Grain</b> is the foundation: know what a row means. Get grain wrong and you either miscount (thinking events are leads) or you trigger <b>fan-out</b> (joining across grains and inflating totals). <b>Events vs. state</b> is a grain decision too — it's choosing the finer, more useful grain (one row per stage-entry) over the lossy one (one row per lead with a mutable status). And that event grain is exactly what makes <b>censoring</b> visible: a stuck lead is simply a lead <i>missing</i> its later event rows. Finally, the <b>four words</b> remind you that even "how many leads" hides a grain-and-identity decision. It all comes back to: <i>what does one row mean, and am I mixing rows that mean different things?</i></p>
+
+  ${callout('turn','Your turn — three questions to answer out loud','✍️',`<p>Don't move on until you can answer each in a sentence or two:</p><ol><li>Why is "we got 500 leads" a very different claim from "we won 500 customers"? Roughly how far apart are those numbers in a normal funnel?</li><li>You join <code class="inline">spend</code> to <code class="inline">leads</code> and your total spend comes back 200× too high. What happened, in one word — and what's the fix?</li><li>Your teammate proposes a <code class="inline">current_stage</code> column "to keep it simple." Give them the one question it can never answer.</li></ol>`)}
+
+  ${reveal('Check your answers',`
+    <ol>
+      <li><b>Orders of magnitude apart.</b> If ~2% of leads become customers, 500 leads is ~10 customers — so "500 leads" and "500 customers" describe funnels that differ ~50×. Conflating them is how people accidentally promise 50× the results.</li>
+      <li><b>Fan-out.</b> The join paired each spend row with many leads, so each dollar was counted once per lead. Fix: aggregate spend and leads each to one row per channel <i>first</i>, then join the summaries.</li>
+      <li><b>Almost any "when" question</b> — e.g. "how long did MQL→SQL take?" or "what did the funnel look like on June 1st?" A single mutable status column keeps only the latest value and erases the timeline.</li>
+    </ol>
+  `)}
+
+  ${callout('tip','Explain the whole project in 60 seconds','🎤',`<p>Practice this until it's automatic: <i>"I'm modeling a marketing funnel as three tables at three grains — leads (one row per lead), stage events (one row per lead per stage, so I keep the full timeline), and spend (one row per channel per day). From those I measure where the funnel leaks, what a customer costs by channel, and where the next dollar should go — being careful about fan-out when I join across grains, and about censoring when I measure durations on leads that haven't finished."</i></p>`)}
  `,
- checkpoint:`Without looking, you can define <b>grain</b>, explain <b>fan-out</b>, argue why <b>events</b> beat a current_stage column, and describe how <b>censoring</b> corrupts a naïve average.`
+ checkpoint:`Without looking, you can: (1) define <b>grain</b> and give the grain of a table, (2) explain <b>fan-out</b> with the $500→$2,000 example and its fix, (3) list a question a <code class="inline">current_stage</code> column can't answer, (4) walk through how <b>censoring</b> biases a naïve "days to close," and (5) distinguish lead / contact / customer / account. If any one is shaky, re-read that card — this module is the spine of every interview answer.`
 },
 
 {num:'2',title:'Design the three tables',time:'90 min',tag:'The heart of the project',
