@@ -196,6 +196,25 @@
   .mod-nav a.nx{text-align:right}
   .mod-nav small{color:var(--faint);font-size:11px;text-transform:uppercase;letter-spacing:.05em;display:block}
   .mod-nav b{font-size:14px}
+  /* time chip */
+  .side-time{display:flex;justify-content:space-between;gap:8px;margin-top:8px;font-size:11.5px;color:var(--muted)}
+  .side-time b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:5px;vertical-align:middle}
+  .live-dot.idle{background:var(--faint)}
+  /* notes editor */
+  .notes-toolbar{display:flex;flex-wrap:wrap;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--line);border-bottom:none;border-radius:12px 12px 0 0;padding:8px}
+  .notes-toolbar button{background:var(--panel-2);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;line-height:1;cursor:pointer;color:var(--ink);min-width:32px}
+  .notes-toolbar button:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+  .nt-sep{width:1px;height:20px;background:var(--line);margin:0 3px}
+  .notes-editor{background:var(--panel);border:1px solid var(--line);border-radius:0 0 12px 12px;padding:22px;min-height:360px;font-size:15px;line-height:1.7;outline:none;color:var(--ink)}
+  .notes-editor:focus{border-color:var(--accent)}
+  .notes-editor:empty::before{content:"Start typing your notes…";color:var(--faint)}
+  .notes-editor h2{font-size:20px;margin:14px 0 8px}
+  .notes-editor h3{font-size:16px;margin:14px 0 6px}
+  .notes-editor ul,.notes-editor ol{padding-left:24px;margin:8px 0}
+  .notes-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:10px}
+  .notes-foot #nt-status{font-size:12px;color:var(--muted)}
+  .notes-actions{display:flex;gap:8px;flex-wrap:wrap}
   .topbar{display:none}
   /* mobile */
   .scrim{display:none}
@@ -228,6 +247,10 @@
     <div class="side-progress">
       <div class="lab"><span>Course progress</span><span id="sp-pct">0%</span></div>
       <div class="bar"><span id="sp-bar" style="width:0%"></span></div>
+      <div class="side-time">
+        <span><span class="live-dot" id="sp-dot"></span>Time on app <b id="sp-time">0s</b></span>
+        <span>today <b id="sp-time-today">0s</b></span>
+      </div>
     </div>
     <nav id="nav"></nav>
     <div class="side-foot">
@@ -1201,6 +1224,7 @@ function renderNav(){
   const route=location.hash||'#/dash';
   nav.innerHTML=`<div class="nav-h">Overview</div>`+
     `<a class="nav-item ${route==='#/dash'?'active':''}" href="#/dash"><span class="ix">◆</span> Dashboard</a>`+
+    `<a class="nav-item ${route==='#/notes'?'active':''}" href="#/notes"><span class="ix">✎</span> My Notes</a>`+
     `<div class="nav-h">Modules</div>`+
     MODULES.map(m=>{
       const r=`#/m/${m.num}`;
@@ -1235,7 +1259,7 @@ function renderDash(){
         <div class="stat-row">
           <div class="stat"><b>${conceptsRead()}/${ALL_CONCEPTS.length}</b><span>Concepts read</span></div>
           <div class="stat"><b>${modsDone}/${MODULES.length}</b><span>Modules complete</span></div>
-          <div class="stat"><b>${overallPct()}%</b><span>Course overall</span></div>
+          <div class="stat"><b id="dash-time">${fmtDur(timeState.total)}</b><span>Time invested</span></div>
         </div>
         <a class="cont-btn" href="#/m/${next.num}">${modsDone===0?'Start with Module 0 →':'Continue: Module '+next.num+' — '+next.title+' →'}</a>
       </div>
@@ -1271,7 +1295,7 @@ function renderModule(num){
   const cp=state.done[m.num];
   const prev=MODULES[i-1],next=MODULES[i+1];
   view.innerHTML=`
-    <span class="eyebrow">Module ${m.num} · ${m.time}</span>
+    <span class="eyebrow">Module ${m.num} · ${m.time} estimate · ${fmtDur(timeState.byModule[m.num]||0)} spent here</span>
     <h1 class="page">${m.title}</h1>
     <p class="sub">${m.tag}</p>
     ${conceptHTML}
@@ -1290,10 +1314,106 @@ function renderModule(num){
 
 function route(){
   const h=location.hash||'#/dash';
-  if(h.startsWith('#/m/'))renderModule(h.slice(4));
-  else renderDash();
+  if(h.startsWith('#/m/')){renderModule(h.slice(4));currentRouteKey='m'+h.slice(4);}
+  else if(h==='#/notes'){renderNotes();currentRouteKey='notes';}
+  else {renderDash();currentRouteKey='dash';}
   renderNav();
+  updateTimeDisplay();
   closeSidebar();
+}
+
+/* ---------- notes (rich-text scratchpad, saved to localStorage) ---------- */
+const NOTES_KEY='mfa_notes_v1';
+const NOTES_SEED='<h2>My Lookup Notes</h2><p>Concepts I looked up while building the project. Edit freely — this saves automatically in your browser.</p><h3>What is psql?</h3><ul><li>PostgreSQL = the database itself (the "kitchen"). psql = the little text tool I type into to talk to it.</li><li>They came in one install. TablePlus is a graphical alternative to psql.</li></ul><h3>What is a Postgres server?</h3><ul><li>The background program that holds the data and does the work. Must be started (<code>brew services start</code>) before anything works.</li></ul>';
+function renderNotes(){
+  const saved=localStorage.getItem(NOTES_KEY);
+  const content=saved!==null?saved:NOTES_SEED;
+  view.innerHTML=`
+    <span class="eyebrow">Your scratchpad</span>
+    <h1 class="page">My Notes</h1>
+    <p class="sub">A place for the concepts you look up as you go. Rich text, saved automatically in your browser, and exportable as a file.</p>
+    <div class="notes-toolbar" id="nt-tb">
+      <button data-cmd="formatBlock" data-val="H2" title="Heading">H1</button>
+      <button data-cmd="formatBlock" data-val="H3" title="Subheading">H2</button>
+      <button data-cmd="formatBlock" data-val="P" title="Normal text">¶</button>
+      <span class="nt-sep"></span>
+      <button data-cmd="bold" title="Bold"><b>B</b></button>
+      <button data-cmd="italic" title="Italic"><i>I</i></button>
+      <button data-cmd="underline" title="Underline"><u>U</u></button>
+      <span class="nt-sep"></span>
+      <button data-cmd="insertUnorderedList" title="Bulleted list">• List</button>
+      <button data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+      <span class="nt-sep"></span>
+      <button data-cmd="fontSize" data-val="5" title="Bigger text">A+</button>
+      <button data-cmd="fontSize" data-val="2" title="Smaller text">A−</button>
+      <span class="nt-sep"></span>
+      <button data-cmd="removeFormat" title="Clear formatting">Clear</button>
+    </div>
+    <div class="notes-editor" id="nt-ed" contenteditable="true" spellcheck="true">${content}</div>
+    <div class="notes-foot">
+      <span id="nt-status">Saved ✓</span>
+      <div class="notes-actions">
+        <button class="ghost" id="nt-html">⭳ Export .html</button>
+        <button class="ghost" id="nt-md">⭳ Export .md</button>
+        <button class="ghost" id="nt-clear">Clear all</button>
+      </div>
+    </div>`;
+  const ed=document.getElementById('nt-ed');
+  const status=document.getElementById('nt-status');
+  const save=()=>localStorage.setItem(NOTES_KEY,ed.innerHTML);
+  document.getElementById('nt-tb').querySelectorAll('button').forEach(b=>{
+    b.addEventListener('mousedown',e=>{
+      e.preventDefault();            // keep the text selection while clicking the button
+      ed.focus();
+      document.execCommand(b.getAttribute('data-cmd'),false,b.getAttribute('data-val')||undefined);
+      save();
+    });
+  });
+  let t;
+  ed.addEventListener('input',()=>{
+    status.textContent='Saving…';
+    clearTimeout(t);
+    t=setTimeout(()=>{save();status.textContent='Saved ✓';},400);
+  });
+  document.getElementById('nt-html').addEventListener('click',()=>downloadNotes('html'));
+  document.getElementById('nt-md').addEventListener('click',()=>downloadNotes('md'));
+  document.getElementById('nt-clear').addEventListener('click',()=>{
+    if(confirm('Clear all notes? This cannot be undone.')){ed.innerHTML='';save();}
+  });
+  window.scrollTo(0,0);
+}
+function downloadNotes(fmt){
+  const ed=document.getElementById('nt-ed');
+  let blob,fname;
+  if(fmt==='md'){
+    blob=new Blob([htmlToMarkdown(ed.innerHTML)],{type:'text/markdown'});fname='my-notes.md';
+  }else{
+    const doc='<!doctype html><html><head><meta charset="utf-8"><title>My Notes</title>'+
+      '<style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:720px;margin:40px auto;padding:0 20px;line-height:1.7;color:#1a1c23}</style>'+
+      '</head><body>'+ed.innerHTML+'</body></html>';
+    blob=new Blob([doc],{type:'text/html'});fname='my-notes.html';
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function htmlToMarkdown(html){
+  const tmp=document.createElement('div');tmp.innerHTML=html;
+  const NL=String.fromCharCode(10);
+  const walk=node=>{let out='';node.childNodes.forEach(n=>{
+    if(n.nodeType===3){out+=n.textContent;return;}
+    const tag=(n.tagName||'').toLowerCase(),inner=walk(n);
+    if(tag==='h1'||tag==='h2')out+=NL+'## '+inner+NL+NL;
+    else if(tag==='h3')out+=NL+'### '+inner+NL+NL;
+    else if(tag==='b'||tag==='strong')out+='**'+inner+'**';
+    else if(tag==='i'||tag==='em')out+='*'+inner+'*';
+    else if(tag==='li')out+='- '+inner+NL;
+    else if(tag==='ul'||tag==='ol')out+=NL+inner+NL;
+    else if(tag==='br')out+=NL;
+    else if(tag==='div'||tag==='p')out+=inner+NL+NL;
+    else out+=inner;
+  });return out;};
+  return walk(tmp).replace(new RegExp(NL+'{3,}','g'),NL+NL).trim();
 }
 
 /* ---------- events ---------- */
@@ -1327,6 +1447,37 @@ const sidebar=document.getElementById('sidebar'),scrim=document.getElementById('
 function closeSidebar(){sidebar.classList.remove('open');scrim.classList.remove('show');}
 document.getElementById('burger').addEventListener('click',()=>{sidebar.classList.toggle('open');scrim.classList.toggle('show');});
 scrim.addEventListener('click',closeSidebar);
+
+/* ---------- implicit reading timer (auto-pauses when idle or tab hidden) ---------- */
+const TIME_KEY='mfa_time_v1';
+let timeState=JSON.parse(localStorage.getItem(TIME_KEY)||'{"total":0,"byDay":{},"byModule":{}}');
+let currentRouteKey='dash';
+let lastActivity=Date.now();
+['mousemove','keydown','scroll','wheel','click','touchstart'].forEach(ev=>
+  window.addEventListener(ev,()=>{lastActivity=Date.now();},{passive:true}));
+function todayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function isActive(){return !document.hidden && (Date.now()-lastActivity<60000);}  // idle after 60s of no input
+function fmtDur(s){s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);if(h)return h+'h '+m+'m';if(m)return m+'m';return s+'s';}
+function saveTime(){localStorage.setItem(TIME_KEY,JSON.stringify(timeState));}
+function updateTimeDisplay(){
+  const active=isActive();
+  const dot=document.getElementById('sp-dot');if(dot)dot.className='live-dot'+(active?'':' idle');
+  const el=document.getElementById('sp-time');if(el)el.textContent=fmtDur(timeState.total);
+  const td=document.getElementById('sp-time-today');if(td)td.textContent=fmtDur(timeState.byDay[todayKey()]||0);
+  const dt=document.getElementById('dash-time');if(dt)dt.textContent=fmtDur(timeState.total);
+}
+let _tsave=0;
+setInterval(()=>{
+  if(isActive()){
+    timeState.total++;
+    const dk=todayKey();timeState.byDay[dk]=(timeState.byDay[dk]||0)+1;
+    if(currentRouteKey&&currentRouteKey[0]==='m'){const mn=currentRouteKey.slice(1);timeState.byModule[mn]=(timeState.byModule[mn]||0)+1;}
+    if(++_tsave>=5){saveTime();_tsave=0;}
+  }
+  updateTimeDisplay();
+},1000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveTime();});
+window.addEventListener('beforeunload',saveTime);
 
 window.addEventListener('hashchange',route);
 route();
