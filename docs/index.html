@@ -885,20 +885,34 @@ FROM '/FULL/PATH/spend.csv' WITH (FORMAT csv, HEADER true);`)}
  checkpoint:`All three tables are populated, counts match the generator, and a <code class="inline">SELECT</code> returns real rows.`
 },
 
-{num:'5',title:'First funnel queries',time:'90 min',tag:'Learn SQL by answering real questions',
+{num:'5',title:'First funnel queries',time:'80 min',tag:'Learn SQL by answering real questions',
  concepts:[
   concept('🧱','The shape of every SQL query',
-   `<p>Every query has this skeleton. You write it top-to-bottom, but Postgres <i>executes</i> roughly FROM → WHERE → GROUP BY → SELECT → ORDER BY. Knowing that order explains most "why doesn't this work" confusion.</p>${code('sql',`SELECT   columns / calculations   -- what to show
-FROM     table                    -- start here
-JOIN     other ON ...             -- attach related rows
-WHERE    row filter               -- keep some rows
-GROUP BY columns                  -- collapse into groups
-ORDER BY columns                  -- sort`)}`),
+   `<p>Almost every query you'll ever write fits one skeleton. Learn it once and SQL stops being intimidating — you're just filling in blanks.</p>
+    ${code('sql',`SELECT   columns / calculations   -- 5. what to show\nFROM     table                    -- 1. start here\nJOIN     other ON ...             -- 2. attach related rows\nWHERE    row filter               -- 3. keep some rows\nGROUP BY columns                  -- 4. collapse into groups\nORDER BY columns                  -- 6. sort the result`)}
+    <h3 class="sub-h">You write it in one order, the database runs it in another</h3>
+    <p>You <i>type</i> SELECT first, but Postgres <i>executes</i> roughly: <b>FROM</b> (get the rows) → <b>WHERE</b> (filter rows) → <b>GROUP BY</b> (collapse into groups) → <b>SELECT</b> (compute what to show) → <b>ORDER BY</b> (sort). The numbers in the comments above show the real order. This one fact explains most beginner confusion — e.g. why you can't always use a column nickname from SELECT inside WHERE (WHERE runs before SELECT, so the nickname doesn't exist yet).</p>`),
+  concept('➗','Aggregation — collapsing many rows into one',
+   `<p>The magic verb in analytics is <b>GROUP BY</b>. It takes many rows and collapses them into one row <i>per group</i>, and an <b>aggregate function</b> summarizes each group into a single number.</p>
+    <p>Picture 2,000 lead rows. <code class="inline">GROUP BY channel</code> sorts them into four piles (google, linkedin, webinar, organic), and <code class="inline">COUNT(*)</code> counts each pile — you get four rows out. The aggregate functions you'll use:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Function</th><th>Answers</th></tr>
+      <tr><td><code class="inline">COUNT(*)</code></td><td>how many rows in this group?</td></tr>
+      <tr><td><code class="inline">COUNT(DISTINCT x)</code></td><td>how many <i>different</i> values of x?</td></tr>
+      <tr><td><code class="inline">SUM(x)</code></td><td>add up x across the group</td></tr>
+      <tr><td><code class="inline">AVG(x)</code></td><td>the average of x</td></tr>
+    </table></div>
+    <p><b>Why <code class="inline">COUNT(*)</code> and <code class="inline">COUNT(DISTINCT lead_id)</code> can differ wildly:</b> in your events table one lead has several rows, so <code class="inline">COUNT(*)</code> counts <i>events</i> while <code class="inline">COUNT(DISTINCT lead_id)</code> counts <i>leads</i>. This is the grain lesson from Module 1 showing up in actual syntax. When someone asks "how many leads reached SQL," you want distinct leads, not event rows.</p>`),
   concept('🔠','Normalize before you group',
-   `<p>Grouping on a raw, dirty source splits one channel into many. Normalizing the source into a clean channel <i>before</i> grouping is the kind of judgment that separates an analyst from someone who can type SQL. Do it every time and say why.</p>`)
+   `<p>Here's the casing trap from Module 2, now live. Your <code class="inline">source_raw</code> column holds <code class="inline">google</code>, <code class="inline">Google</code>, <code class="inline">GOOGLE</code>, <code class="inline">Google Ads</code> — four spellings of one channel. Run <code class="inline">GROUP BY source_raw</code> and Postgres treats each spelling as a separate group, so Google fractures into four rows and every per-channel number is wrong.</p>
+    <p>The fix is to <b>normalize</b> — collapse the spellings into one clean channel — <i>before</i> grouping. <code class="inline">LOWER()</code> handles the casing (<code class="inline">GOOGLE</code> → <code class="inline">google</code>); a <code class="inline">CASE</code> expression handles the rest (<code class="inline">google ads</code> → <code class="inline">google</code>). Normalizing before grouping is the judgment that separates an analyst from someone who can merely type SQL — and you should say out loud that you're doing it, and why.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"Before I group by any source or category field, I normalize it — casing and known aliases — because raw CRM values fracture the same channel into several groups and quietly corrupt every downstream rate."</p>`)}`),
+  concept('🧮','Integer division — the silent zero',
+   `<p>A conversion <i>rate</i> is a division: leads that reached SQL ÷ leads that reached MQL. But SQL has a trap: dividing two <b>integers</b> gives an integer, throwing away the decimal. So <code class="inline">495 / 1100</code> returns <code class="inline">0</code>, not <code class="inline">0.45</code> — your rate silently becomes zero and the query still "works."</p>
+    <p>The fix is to make one side a decimal by <b>casting</b>: <code class="inline">495::numeric / 1100</code> gives <code class="inline">0.45</code>. The <code class="inline">::numeric</code> tells Postgres "treat this as an exact decimal." Any time you divide counts to get a rate, cast the top — every time, reflexively.</p>`)
  ],
  body:`
-  <p class="lead">Now you learn SQL by answering real questions. <b>Predict the answer before running each query</b> — that habit is how you catch wrong-but-plausible results.</p>
+  <p class="lead">Now you learn SQL the way you'll actually use it — by answering real business questions, one at a time. Each question below introduces a little new syntax. Follow one habit religiously: <b>predict the answer before you run the query.</b> When the result doesn't match your prediction, you've either learned something about the data or caught a bug — both are wins. Analysts who skip this step ship wrong-but-plausible numbers.</p>
   ${callout('turn','Your turn — leads by channel (the casing trap is live)','✍️',`<p>Run it the naïve way first and <i>see</i> the fracture; then fix it. You'll need <code class="inline">COUNT(*)</code>, <code class="inline">GROUP BY</code>, and a way to unify spellings.</p>`)}
   ${reveal('Reveal — the naïve version, why it\'s wrong, and the fix',`
     <p><b>Naïve (wrong)</b> — returns separate rows for <code class="inline">google</code>, <code class="inline">Google</code>, <code class="inline">GOOGLE</code>, <code class="inline">Google Ads</code>:</p>
@@ -945,14 +959,39 @@ FROM lead_stage_events;`)}
  checkpoint:`You can produce clean per-channel lead counts, funnel stage counts, and conversion rates — and explain the normalization and the <code class="inline">::numeric</code> cast.`
 },
 
-{num:'6',title:'The judgment traps',time:'2.5 hrs',tag:'The interview centerpiece',
+{num:'6',title:'The judgment traps',time:'2 hrs',tag:'The interview centerpiece',
  concepts:[
-  concept('✂️','Censored averages',`<p>An "average time to close" built by subtracting timestamps only includes leads that <i>have</i> closed — disproportionately the fast, old ones — and silently excludes every in-flight lead. The honest response isn't a different AVG; it's a <b>reframe</b>: state the population, report the censored count, and use a fixed window.</p>`),
-  concept('🎓','Cohort attribution & maturity',`<p><b>Cohort (created-date) attribution</b> credits a win back to the month the lead was <i>created</i>, lining the win up with the spend that caused it. But a cohort created last week can't have closed yet — comparing it to January raw makes it look terrible purely because it's <i>young</i>. Fix the <b>window</b>, not the number: measure every cohort at the same age.</p>${diagram('cohort')}`),
-  concept('🔮','Predictive metrics & drift',`<p>Apply a <b>mature</b> cohort's conversion rate to a young cohort's current volume to forecast its eventual customers. The one load-bearing assumption: <b>no drift</b> — the conditions that produced the mature rate still hold. Always name that assumption when you present a projection.</p>`)
+  concept('✂️','Censored averages — the trap that biases duration',
+   `<p>You met censoring in Module 1; here's how it ambushes a specific, common metric: "how long does a lead take to close?"</p>
+    <h3 class="sub-h">The mechanism, step by step</h3>
+    <p>You compute it by subtracting each lead's created date from its closed date. But an in-flight lead has <b>no closed date</b> — so the subtraction produces nothing, and that lead is <b>silently dropped</b> from the average. Your result is computed only over leads that <i>have already closed</i>.</p>
+    <p><b>Which direction does it lie?</b> Always toward "faster than reality." The leads that closed are disproportionately the <i>fast</i> ones; the slow, stuck leads are exactly the ones still open and therefore excluded. So your "30-day average" understates the true time — and it drops the very stuck leads that made your VP ask the question in the first place.</p>
+    <h3 class="sub-h">The fix isn't a cleverer AVG — it's a reframe</h3>
+    <p>Two honest moves: (1) <b>state the population</b> — "average <i>among leads that have closed</i>" — and report how many are still open alongside it. (2) To compare across time, switch to a <b>fixed window</b>: "of January's leads, what share closed within 90 days?" Every lead then gets the same 90-day chance, so nobody is silently excluded.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"A naïve time-to-close average is biased low because it only sees leads that already closed — it censors the slow, in-flight ones. I'd report it with its population and open-count, and for comparisons use a fixed-window conversion rate so every record is judged over the same horizon."</p>`)}`),
+  concept('🎓','Cohort attribution & maturity',
+   `<p>"What's our conversion rate?" hides a choice about <b>which month gets the credit</b> for a win.</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Approach</th><th>Credits the win to…</th><th>Good for</th></tr>
+      <tr><td>Conversion-date</td><td>the month it <i>closed</i></td><td>"what did we book this month?"</td></tr>
+      <tr><td><b>Cohort (created-date)</b></td><td>the month the lead was <i>created</i></td><td>judging acquisition — it lines the win up with the spend that caused it</td></tr>
+    </table></div>
+    <p>To judge a channel you want <b>cohort</b> attribution, because the money was spent when the lead was created, not when it happened to close months later.</p>
+    <h3 class="sub-h">The maturity trap</h3>
+    <p>But deals here take ~45+ days. A cohort created <i>last week</i> physically cannot have closed yet. If you compare last week's raw conversion to January's, the recent cohort looks catastrophic — not because it's worse, but because it's <b>young</b>. You'd "discover" a crisis that is really just the calendar.</p>
+    ${diagram('cohort')}
+    <p><b>The fix: fix the window, don't freeze the number.</b> Measure every cohort at the <i>same age</i> — "share that closed within 90 days of creation" — and exclude cohorts too young to have had their 90 days. Now differences are real signal, not maturity artifacts.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"I attribute conversions to the created cohort so they line up with acquisition spend, and I always measure cohorts at a fixed age — a 90-day conversion rate — so I'm not comparing a mature cohort to one that simply hasn't had time to convert."</p>`)}`),
+  concept('🔮','Predictive metrics & drift',
+   `<p>Because young cohorts are censored, you can <i>estimate</i> where they'll land. Take a <b>mature</b> cohort's known 90-day conversion rate and apply it to a young cohort's current volume:</p>
+    ${code('sql',"projected_wins(June) = size_of_June_cohort × mature_90day_won_rate")}
+    <p>If June brought 300 leads and mature cohorts convert at 3%, you project ~9 eventual customers from June — a forecast you can put in front of leadership <i>while clearly labeling it a forecast</i>.</p>
+    <h3 class="sub-h">The one assumption that makes or breaks it</h3>
+    <p><b>No drift.</b> Borrowing the mature rate only works if the conditions that produced it still hold — same channel mix, same product, same pricing, same sales motion. If you just ran a discount or changed your ad targeting, the old rate is invalid and your forecast is fiction. <b>Always name this assumption out loud</b> when you present a projection; an unlabeled forecast presented as fact is how analysts lose credibility.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"I can project a young cohort's outcome by applying a mature cohort's conversion rate to its current volume — as long as I flag the no-drift assumption, that acquisition and sales conditions haven't changed since the mature cohort was created."</p>`)}`)
  ],
  body:`
-  <p class="lead">This module is the reason the project is worth doing. Anyone can <code class="inline">GROUP BY</code>. The analyst is the person who <i>doesn't</i> report the naïve number. For each trap: compute the tempting-but-wrong version, see why it lies, then compute the honest one.</p>
+  <p class="lead">This module is the reason the project is worth doing — it's what turns "someone who can write SQL" into "an analyst." Anyone can <code class="inline">GROUP BY</code>. The analyst is the person who <i>refuses to report the naïve number</i> and can explain exactly why it's wrong. For each trap below you'll do the same three-step drill: <b>(1)</b> compute the tempting-but-wrong version, <b>(2)</b> see precisely why it lies, <b>(3)</b> produce the honest version. Being able to <i>demonstrate</i> all three — wrong query, diagnosis, fix — is the single most impressive thing you can show in an interview.</p>
   <h3 class="sub-h">Trap 1 — "How long does it take to close?"</h3>
   ${callout('turn','Your turn (the wrong way first)','✍️',`<p>Compute average days from <code class="inline">created</code> to <code class="inline">closed_won</code> by subtracting timestamps (a self-join of the events table). Then ask: <b>which leads are in this average, and which silently fell out?</b></p>`)}
   ${reveal('Reveal — the naïve duration, why it lies, and the honest framing',`
@@ -998,11 +1037,33 @@ WHERE l.created_at <= DATE '2025-07-24' - INTERVAL '90 days'`)}
 
 {num:'7',title:'Cost & spend analysis',time:'90 min',tag:'Where the grain lessons pay off',
  concepts:[
-  concept('🧮','Every cost metric is a cross-grain ratio',`<p>Cost per lead / per customer = spend ÷ count, from two tables of <i>different grain</i>. So every one requires <b>aggregate-then-join</b>: roll each side to a common grain (channel) first, then divide. This is how you avoid the fan-out from Module 6.</p>`),
-  concept('📉','Marginal vs. average cost',`<p><b>Average</b> cost per customer says how you did; it does <i>not</i> say what to do next, because spending more reaches a worse audience — the next dollar finds fence-sitters. The <b>marginal</b> cost of the next customer is higher. Decision rule: spend up to where marginal cost ≈ the value of a customer. A rising average usually means <b>spend less, not kill the channel.</b></p>`)
+  concept('🧮','Every cost metric is a cross-grain ratio',
+   `<p>Here every lesson about grain pays off in real dollars. Notice what "cost per lead" and "cost per customer" actually are:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Metric</th><th>Formula</th><th>Comes from</th></tr>
+      <tr><td>Cost per lead</td><td>spend ÷ leads</td><td>two tables of different grain</td></tr>
+      <tr><td>Cost per customer</td><td>spend ÷ customers</td><td>two tables of different grain</td></tr>
+    </table></div>
+    <p>They are <b>ratios</b>, never stored columns — and the numerator (spend, per channel-day) and denominator (leads, per lead) live at <i>different grains</i>. Divide them naïvely with a join and you get fan-out (Module 1): the total explodes. The safe recipe is always the same three steps: <b>(1)</b> roll spend up to one row per channel, <b>(2)</b> roll leads up to one row per channel, <b>(3)</b> join those two summaries — now at the <i>same</i> grain — and divide. Aggregate first, then join.</p>`),
+  concept('🗂️','CTEs — named building blocks with WITH',
+   `<p>A <b>CTE</b> ("Common Table Expression," written <code class="inline">WITH name AS (…)</code>) is a named temporary result you define at the top of a query and then use below like a table. It's how you do "aggregate first, then join" cleanly.</p>
+    ${code('sql',"WITH spend_by_channel AS (\n  SELECT channel, SUM(amount) AS total_spend\n  FROM spend GROUP BY channel\n)\nSELECT * FROM spend_by_channel;   -- use it like a table")}
+    <p>Think of each CTE as a labeled bowl of prepped ingredients: you make <code class="inline">spend_by_channel</code> (one row per channel) and <code class="inline">leads_by_channel</code> (one row per channel) separately, then combine them. It reads top-to-bottom like a recipe, and — crucially — it forces both sides to a shared grain <i>before</i> they ever meet, which is exactly what prevents fan-out.</p>`),
+  concept('📉','Marginal vs. average cost — the number that drives decisions',
+   `<p>This is the most sophisticated idea in the project, and the one that most impresses interviewers because it separates description from decision.</p>
+    <ul>
+      <li><b>Average</b> cost per customer tells you <i>how you did</i>: total spend ÷ total customers.</li>
+      <li><b>Marginal</b> cost tells you <i>what to do next</i>: what did the <i>most recent</i> customers cost?</li>
+    </ul>
+    <p><b>Why they differ:</b> the eager buyers convert cheaply; as you spend more on a channel, you reach a worse audience — fence-sitters who cost more to convert. So the next customer always costs more than the average so far.</p>
+    <h3 class="sub-h">Worked example</h3>
+    <p>Say LinkedIn's first \$10k won 100 customers (avg \$100 each). You double spend to \$20k and win only 150 total — the second \$10k bought just 50 customers, so those <b>marginal</b> customers cost \$200 each. The average ((\$20k/150) ≈ \$133) looks fine; the margin (\$200) is the truth about your next dollar.</p>
+    <p><b>The decision rule:</b> keep spending on a channel until its <i>marginal</i> cost per customer reaches the <i>value</i> of a customer — not until the average looks bad. And a rising average usually means <b>spend less, not kill the channel</b>: you'd throw away the cheap early customers too.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"Average cost per customer scores the past; marginal cost drives the next decision. Because extra spend reaches a worse audience, marginal cost exceeds average. I'd fund each channel up to where its marginal cost equals customer value — and read a rising average as a signal to pull back, not to cut the channel."</p>`)}`)
  ],
  body:`
-  ${callout('turn','Your turn — cost per lead, done right','✍️',`<p>Use a <b>CTE</b> (<code class="inline">WITH name AS (…)</code>, a named temporary result): build spend-per-channel and leads-per-channel separately (normalizing the dirty source!), then join those summaries and divide.</p>`)}
+  <p class="lead">Everything about grain, fan-out, and aggregate-then-join now converts into dollars-and-cents decisions. This is where the modeling discipline earns its keep: because you respect grain, your cost numbers are trustworthy — and because you understand marginal vs. average, you can turn those numbers into a recommendation a CFO would accept.</p>
+  ${callout('turn','Your turn — cost per lead, done right','✍️',`<p>Use two <b>CTEs</b> (from the concept above): build spend-per-channel and leads-per-channel separately (normalizing the dirty source!), then join those summaries and divide. Predict which channel is most expensive per lead before you run it.</p>`)}
   ${reveal('Reveal — cost per lead via aggregate-then-join',`
     ${code('sql',`WITH spend_by_channel AS (        -- grain: one row per channel
   SELECT channel, SUM(amount) AS total_spend
