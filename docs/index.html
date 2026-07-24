@@ -367,27 +367,77 @@ function concept(emoji,title,html){
 
 /* ---------- COURSE CONTENT ---------- */
 const MODULES=[
-{num:'0',title:'Setup',time:'45 min',tag:'Get your tools ready',
- concepts:[concept('🔌','Client vs. server — what a database really is',
-   `<p>A database has two halves. The <b>server</b> is a program that runs quietly in the background and holds all your data. The <b>client</b> (like <code class="inline">psql</code>, or a point-and-click app) connects to the server to ask questions. Nearly every real database works this way — and interviewers ask about it.</p>`)],
+{num:'0',title:'Setup',time:'35 min',tag:'Understand your tools, then get them running',
+ concepts:[
+  concept('🗄️','What a database is — and what SQL is',
+   `<p>You've used spreadsheets. A <b>database</b> is the grown-up version: it stores data in <b>tables</b> (rows and columns, exactly like a spreadsheet tab), but it can hold millions of rows, enforce rules ("this column must be a date"), and — crucially — let you <i>ask questions</i> that would be impossible to click together in Excel.</p>
+    <p><b>SQL</b> (say "sequel" or "ess-cue-el") is the language you ask those questions in. It reads almost like English:</p>
+    ${code('sql',"SELECT channel, COUNT(*)\nFROM leads\nWHERE region = 'EMEA'\nGROUP BY channel;",'"How many leads per channel, but only for EMEA?"')}
+    <p>That's the whole job of this project: put marketing data into tables, then write SQL questions against it. You are not "coding" in the scary sense — you're describing <i>what you want</i> and letting the database figure out how to get it.</p>
+    <p><b>PostgreSQL</b> (or "Postgres") is the specific database program we use. It's free, open-source, and the one you'll see most often in real analyst job postings — so it's worth having on your résumé by name.</p>`),
+  concept('🔌','Client vs. server — the shape of every database',
+   `<p>A database has two halves, and knowing the split will save you an hour of confusion later.</p>
+    <p><b>Restaurant analogy.</b> The <b>server</b> is the kitchen: it runs in the back, holds all the ingredients (your data), and does the actual work. The <b>client</b> is the waiter: it takes your order (your SQL), carries it to the kitchen, and brings back the plate (your results). You never walk into the kitchen — you talk to the waiter.</p>
+    <ul>
+      <li>The <b>server</b> here is PostgreSQL running in the background. It must be <i>started</i> for anything to work — a closed kitchen serves no one. That's why Step 1 below is "start the server."</li>
+      <li>The <b>client</b> is whatever you type into: <code class="inline">psql</code> (a text client) or a point-and-click app like TablePlus. You can have many clients talking to one server.</li>
+    </ul>
+    <p>Nearly every real database — Postgres, MySQL, Snowflake, BigQuery — works this way. Interviewers like to hear you name the split.</p>`)
+ ],
  body:`
-  <p class="lead">Good news: PostgreSQL and Python are <b>already installed</b> on your machine, so there's no install gauntlet. You just need to start the database, create your project database, and connect to it.</p>
-  <h3 class="sub-h">1 · Start PostgreSQL</h3>
-  <p>Open Terminal (press <code class="inline">Cmd + Space</code>, type "Terminal"). A command that finishes quietly usually worked — errors are loud.</p>
-  ${code('bash','psql --version\nbrew services start postgresql@16','Confirm it exists, then start the background server')}
-  <h3 class="sub-h">2 · Create your database</h3>
-  <p>One server can hold many databases. Make one for this project, then connect:</p>
+  <p class="lead">Great news: PostgreSQL and Python are <b>already installed</b> on your Mac, so you skip the painful part. This module is about <i>understanding</i> the tools (above) and getting the database running (below). If a step throws an error, read the troubleshooting note under it — most first-timers hit one of these.</p>
+
+  <h2 class="sec">The terminal, in 90 seconds</h2>
+  <p>The <b>terminal</b> is a window where you type commands instead of clicking. Open it: press <code class="inline">Cmd + Space</code>, type "Terminal", press Enter. Three rules are all you need:</p>
+  <ul>
+    <li>Type a command, press <b>Enter</b> to run it.</li>
+    <li>A command that finishes with <b>no message</b> usually <i>worked</i>. Errors are loud and red-ish.</li>
+    <li>The <code class="inline">$</code> or <code class="inline">%</code> at the start of a line is just the prompt — you don't type it.</li>
+  </ul>
+
+  <h2 class="sec">1 · Start the database server</h2>
+  <p>First confirm Postgres exists, then start the background server (the "kitchen"):</p>
+  ${code('bash','psql --version\nbrew services start postgresql@16','Confirm it exists, then start the server')}
+  ${callout('warn','If that errors','⚠️',`<p>If <code class="inline">brew services start postgresql@16</code> says "No available formula," your version number differs. Run <code class="inline">brew services list</code> to see the real name (e.g. <code class="inline">postgresql@17</code>) and use that. If <code class="inline">psql</code> is "command not found," Postgres isn't on your PATH — run <code class="inline">brew install postgresql@16</code> and try again.</p>`)}
+
+  <h2 class="sec">2 · Create your project database</h2>
+  <p>One Postgres server can hold many independent databases — like many binders in one filing cabinet. Create one just for this project, then connect to it:</p>
   ${code('bash','createdb marketing_funnel\npsql marketing_funnel')}
-  <p>Your prompt becomes <code class="inline">marketing_funnel=#</code> — you're "inside" the database. Type <code class="inline">\\q</code> to leave, <code class="inline">\\dt</code> to list tables.</p>
-  <h3 class="sub-h">3 · Get a friendly window (recommended)</h3>
-  <p>Typing long queries into a terminal is painful. Install a GUI client — a proper editor with results shown as a grid:</p>
-  <ul><li><b>TablePlus</b> — tableplus.com (easiest, free tier is plenty)</li><li><b>DBeaver</b> — dbeaver.io (fully free)</li></ul>
-  <p>New PostgreSQL connection → host <code class="inline">localhost</code>, port <code class="inline">5432</code>, database <code class="inline">marketing_funnel</code>, user = your Mac username, no password → Connect.</p>
-  <h3 class="sub-h">4 · Save progress with Git</h3>
-  <p>You don't need to master git — just three commands whenever you finish something:</p>
+  <p>Your prompt changes to <code class="inline">marketing_funnel=#</code>. That means you're now "inside" the database, and anything you type goes to it. A few housekeeping commands (note the backslash — these are psql shortcuts, not SQL):</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>Type this</th><th>What it does</th></tr>
+    <tr><td><code class="inline">\\dt</code></td><td>List the tables (none yet — that's expected)</td></tr>
+    <tr><td><code class="inline">\\q</code></td><td>Quit, back to the normal terminal</td></tr>
+    <tr><td><code class="inline">SELECT 1;</code></td><td>A trivial query. If it returns <code class="inline">1</code>, everything works.</td></tr>
+  </table></div>
+  ${callout('warn','If that errors','⚠️',`<p><code class="inline">database "marketing_funnel" already exists</code> just means you ran it twice — harmless, skip to <code class="inline">psql marketing_funnel</code>. <code class="inline">role "yourname" does not exist</code> means Postgres has no user matching your Mac account — run <code class="inline">createuser -s $(whoami)</code> once, then retry.</p>`)}
+
+  <h2 class="sec">3 · Get a friendly window (strongly recommended)</h2>
+  <p>Typing long queries into the terminal is genuinely painful — no scrolling back, no colors, results as raw text. Install a <b>GUI client</b>: a real editor where you write queries and see results as a clean grid. This one choice will make the whole project more pleasant.</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>Option</th><th>Notes</th></tr>
+    <tr><td><b>TablePlus</b> — tableplus.com</td><td>Easiest to learn. Free tier is plenty for this project.</td></tr>
+    <tr><td><b>DBeaver</b> — dbeaver.io</td><td>Completely free and open-source; a little busier.</td></tr>
+  </table></div>
+  <p>In the app, create a new <b>PostgreSQL</b> connection with these settings:</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Host</td><td><code class="inline">localhost</code> (your own computer)</td></tr>
+    <tr><td>Port</td><td><code class="inline">5432</code> (Postgres's default door number)</td></tr>
+    <tr><td>Database</td><td><code class="inline">marketing_funnel</code></td></tr>
+    <tr><td>User</td><td>your Mac username</td></tr>
+    <tr><td>Password</td><td>leave blank</td></tr>
+  </table></div>
+  <p>Click Connect. You now have a comfortable home for the rest of the project.</p>
+
+  <h2 class="sec">4 · Save your progress with Git</h2>
+  <p><b>Git</b> takes a snapshot of your work you can always return to — think "save points" in a game, stored both on your Mac and on GitHub. You don't need to master it. Whenever you finish something meaningful, run these three commands from your project folder:</p>
   ${code('bash','git add -A\ngit commit -m "Describe what you just did"\ngit push')}
+  <p><code class="inline">add</code> stages your changes, <code class="inline">commit</code> saves a snapshot with a note, <code class="inline">push</code> uploads it to GitHub. That's the whole loop.</p>
+
+  ${callout('turn','Your turn — prove the whole chain works','✍️',`<p>Before leaving this module: start the server, open your GUI client, connect to <code class="inline">marketing_funnel</code>, and run <code class="inline">SELECT 1;</code>. Seeing a result grid with a single <code class="inline">1</code> in it means the kitchen is open, the waiter is connected, and you're ready to build. If it fails, the error almost always matches a troubleshooting note above.</p>`)}
  `,
- checkpoint:`You can start Postgres, connect to <b>marketing_funnel</b>, run <code class="inline">SELECT 1;</code> and see a result.`
+ checkpoint:`You can explain what a database, SQL, and the client/server split are; you've started Postgres, connected to <b>marketing_funnel</b> from a GUI client, and run <code class="inline">SELECT 1;</code> successfully.`
 },
 
 {num:'1',title:'The mental model',time:'40 min',tag:'The five ideas everything rests on',
@@ -528,33 +578,100 @@ const MODULES=[
  checkpoint:`Without looking, you can: (1) define <b>grain</b> and give the grain of a table, (2) explain <b>fan-out</b> with the $500→$2,000 example and its fix, (3) list a question a <code class="inline">current_stage</code> column can't answer, (4) walk through how <b>censoring</b> biases a naïve "days to close," and (5) distinguish lead / contact / customer / account. If any one is shaky, re-read that card — this module is the spine of every interview answer.`
 },
 
-{num:'2',title:'Design the three tables',time:'90 min',tag:'The heart of the project',
+{num:'2',title:'Design the three tables',time:'75 min',tag:'The heart of the project',
  concepts:[
-  concept('🗝️','Keys — primary and foreign',
-   `<p>A <b>primary key</b> is the column that uniquely names each row (e.g. <code class="inline">lead_id</code>). A <b>foreign key</b> is a column that points at another table's primary key (e.g. an event's <code class="inline">lead_id</code> points back to a real lead), letting the database enforce the relationship.</p>`)
+  concept('📐','Dimension tables vs. fact tables',
+   `<p>Analysts sort tables into two families, and naming which is which is a fast way to sound like you know what you're doing.</p>
+    <ul>
+      <li>A <b>dimension</b> describes a <i>thing</i> and its fixed attributes — the <i>nouns</i> of your business. Our <code class="inline">leads</code> table is a dimension: one row per lead, holding facts about that lead that don't change (when it was created, where it came from).</li>
+      <li>A <b>fact</b> table records <i>things that happen</i> — the <i>verbs</i>, usually with a timestamp and a number. Our <code class="inline">lead_stage_events</code> (a lead moved to a stage) and <code class="inline">spend</code> (we spent money on a day) are fact tables.</li>
+    </ul>
+    <p><b>Rule of thumb:</b> if a row answers "what <i>is</i> this?" it's a dimension; if it answers "what <i>happened</i>?" it's a fact. Facts point at dimensions (an event points at the lead it happened to). This "facts surrounded by dimensions" shape is called a <b>star schema</b> — the single most common design in analytics.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"I modeled leads as a dimension and stage-events and spend as fact tables — a small star schema. The facts carry the timestamps and measures; the dimension carries the descriptive attributes I slice by."</p>`)}`),
+  concept('🗝️','Keys — and what breaks without them',
+   `<p>Keys are how a database keeps its rows honest and its tables connected.</p>
+    <h3 class="sub-h">Primary key — the row's unique name</h3>
+    <p>A <b>primary key</b> is a column whose value is <i>unique on every row and never empty</i> — it's how you address one specific row. <code class="inline">lead_id</code> is the primary key of <code class="inline">leads</code>. If two leads could share <code class="inline">lead_id = 5</code>, then "show me lead 5" is ambiguous and every join built on it is corrupt. The primary key forbids that.</p>
+    <h3 class="sub-h">Foreign key — the honest pointer</h3>
+    <p>A <b>foreign key</b> is a column in one table that points at another table's primary key. In <code class="inline">lead_stage_events</code>, the <code class="inline">lead_id</code> column is a foreign key pointing back at <code class="inline">leads.lead_id</code> — it says "this event happened to <i>that</i> lead."</p>
+    <p><b>Here's the payoff.</b> Declare the foreign key and Postgres will <i>refuse</i> to insert an event whose <code class="inline">lead_id</code> doesn't exist in <code class="inline">leads</code>. Without it, nothing stops you loading an event for lead 9999 that was never created — a "ghost" or <b>orphan</b> row. Later you join events to leads, the orphan silently vanishes from the results, your counts are quietly short, and no error ever fires. The foreign key turns that silent data-corruption bug into a loud, immediate rejection at load time. That's <b>referential integrity</b>, and it's a phrase worth being able to say.</p>
+    ${callout('tip','Say it like this in an interview','🎙️',`<p>"Each event carries a foreign key to the lead it belongs to, so the database enforces referential integrity — I can't create an event for a lead that doesn't exist. That prevents orphan rows that would silently drop out of joins."</p>`)}`),
+  concept('🔢','Data types — and why money is never a float',
+   `<p>Every column has a <b>type</b> that says what kind of value it holds. Picking the right one prevents whole categories of bugs. The five you need:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Type</th><th>Holds</th><th>Example</th></tr>
+      <tr><td><code class="inline">INTEGER</code></td><td>whole numbers</td><td>lead_id, clicks</td></tr>
+      <tr><td><code class="inline">TEXT</code></td><td>any string</td><td>source_raw, stage</td></tr>
+      <tr><td><code class="inline">TIMESTAMP</code></td><td>a date <i>and</i> time</td><td>event_at (Mar 4, 09:14)</td></tr>
+      <tr><td><code class="inline">DATE</code></td><td>a day, no time</td><td>spend_date (Mar 4)</td></tr>
+      <tr><td><code class="inline">NUMERIC</code></td><td>exact decimals</td><td>amount ($499.99)</td></tr>
+    </table></div>
+    <h3 class="sub-h">The float trap — a $0.01 that becomes a lawsuit</h3>
+    <p>Computers store "floating-point" decimals (the <code class="inline">FLOAT</code>/<code class="inline">REAL</code> types) in binary, and many everyday amounts <i>can't be represented exactly</i> — the same way ⅓ can't be written exactly in decimal. So <code class="inline">0.1 + 0.2</code> in floating point is <code class="inline">0.30000000000000004</code>. One cent of error, times millions of rows, times a finance team, equals a very bad afternoon. That's why money uses <code class="inline">NUMERIC</code> (also called <code class="inline">DECIMAL</code>): it stores the exact digits. <b>Rule: money and any value you'll sum for a total → <code class="inline">NUMERIC</code>, never a float.</b></p>`)
  ],
  body:`
-  <p class="lead">Now you design the schema — the intellectual core. Resist peeking at the reference. The struggle <i>is</i> the education.</p>
-  <p>Three kinds of fact live in the story, which map to three tables:</p>
-  <ol><li><b>Who the leads are</b> and where each came from (fixed facts).</li><li><b>What happened to each lead over time</b> (funnel movement = events).</li><li><b>What we spent</b> to acquire them.</li></ol>
-  ${diagram('schema','A strong design. Note how the three tables sit at three different grains.')}
-  <h3 class="sub-h">Two tests to apply to every column</h3>
-  <ul><li><b>The change test:</b> does this fact ever change for a row? A lead's <i>source</i> doesn't change → it lives on the lead. A lead's <i>stage</i> changes → it's an event.</li><li><b>The grain test:</b> does this column stay true for every row at this grain, or force you to repeat data?</li></ul>
-  ${callout('turn','Your turn','✍️',`<p>For <b>each</b> table, write down on paper: (1) "one row = one ______" (the grain), (2) which columns belong and <i>why here and not elsewhere</i>, (3) the primary key, (4) any foreign key. Do this <b>before</b> opening the reference.</p>`)}
-  ${callout('tip','The casing trap — design it in on purpose','💡',`<p>Real CRM data is filthy: the same channel arrives as <code class="inline">Google</code>, <code class="inline">google</code>, <code class="inline">GOOGLE</code>, <code class="inline">Google Ads</code>. Store the <b>raw</b> source as it arrived; you'll learn to normalize it later. We'll dirty it deliberately in the data generator.</p>`)}
-  ${reveal('Reveal the reference three-table design + reasoning',`
-    <p>This is <i>a</i> strong design, not the only one. If yours differs but passes both tests, it may be just as defensible — that's the point.</p>
-    <h3 class="sub-h">leads — a dimension (fixed facts about each lead)</h3>
-    <p><b>Grain:</b> one row = one lead. <b>Columns:</b> <code class="inline">lead_id</code> (PK), <code class="inline">created_at</code>, <code class="inline">source_raw</code> (un-cleaned), <code class="inline">campaign</code>, <code class="inline">region</code>. There is deliberately <b>no current_stage</b> — stage changes, so it belongs in events.</p>
-    <h3 class="sub-h">lead_stage_events — a fact table (the movements)</h3>
-    <p><b>Grain:</b> one row = one lead entering one stage at one moment. A lead reaching four stages has four rows.</p>
+  <p class="lead">Now you design the schema — the intellectual core of the whole project. This is what an interviewer will probe hardest, because it's where judgment shows. Resist peeking at the reference: the struggle of deciding where each column belongs <i>is</i> the education. When you can defend your schema, you can defend the project.</p>
+
+  <h2 class="sec">From story to tables</h2>
+  <p>Reread the Northwind story from Module 1. Three <i>kinds</i> of fact live in it, and each becomes a table:</p>
+  <ol>
+    <li><b>Who the leads are</b> and where each came from — fixed facts about a lead. → a <b>dimension</b>.</li>
+    <li><b>What happened to each lead over time</b> — funnel movements. → a <b>fact</b> table of events.</li>
+    <li><b>What we spent</b> to acquire them — money over time. → a <b>fact</b> table.</li>
+  </ol>
+  ${diagram('schema','The target design: one dimension (leads) and two fact tables, at three different grains.')}
+
+  <h2 class="sec">The two questions that place every column</h2>
+  <p>For any column you're tempted to add, ask two things. Together they decide, unambiguously, which table it belongs on.</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>Test</th><th>The question</th><th>What it tells you</th></tr>
+    <tr><td><b>Change test</b></td><td>Does this fact ever change for a given row?</td><td>Unchanging facts about a lead (its source) live on the <b>lead</b>. Facts that change over time (its stage) are <b>events</b>.</td></tr>
+    <tr><td><b>Grain test</b></td><td>Does this column stay true for every row at this table's grain — or would it force me to repeat/duplicate data?</td><td>If a column would repeat the same value across many rows, it probably belongs on a different (coarser-grained) table.</td></tr>
+  </table></div>
+  <p><b>Worked application — where does "stage" go?</b> Change test: a lead's stage changes constantly (created → mql → sql…). Fails "unchanging," so it is <i>not</i> a fixed attribute of the lead — it's an event. Put it on <code class="inline">leads</code> and you're back to the doomed <code class="inline">current_stage</code> column from Module 1. Put it on the events table as a value in a <code class="inline">stage</code> column, and the timeline survives. The test <i>decides</i> for you.</p>
+  <p><b>Worked application — where does "spend" go?</b> Grain test: <code class="inline">leads</code> is one row per lead, but spend happens per <i>channel per day</i>, independent of any single lead. To put a spend number on a lead you'd have to invent one, and it would break the day a channel spent money but produced zero leads. So spend needs its own table at its own grain. Cost-per-lead is then a <b>ratio you compute</b> by rolling both tables to a common grain — never a stored column.</p>
+
+  ${callout('turn','Your turn — design all three before reading on','✍️',`<p>On paper, for <b>each</b> table write: (1) "one row = one ______" (the grain), (2) every column and <i>why it belongs here and not elsewhere</i> (name the test that decides it), (3) the primary key, (4) any foreign key. Spend real time here. Then — and only then — open the reference and compare your <i>reasoning</i>, not just your column list.</p>`)}
+
+  ${callout('tip','The casing trap — design it in on purpose','💡',`<p>Real CRM data is filthy: the same channel arrives as <code class="inline">Google</code>, <code class="inline">google</code>, <code class="inline">GOOGLE</code>, <code class="inline">Google Ads</code>. A beginner "cleans" it on the way in and loses the evidence. The professional move is to store the <b>raw</b> source exactly as it arrived (<code class="inline">source_raw</code>) and normalize it <i>at query time</i>, so the original is never lost. We'll dirty it deliberately in the generator (Module 3) so you get practice cleaning it (Module 5).</p>`)}
+
+  ${reveal('Reveal the reference three-table design + full per-column reasoning',`
+    <p>This is <i>a</i> strong design, not the only one. If yours differs but survives the change test and grain test, it may be just as defensible — comparing reasoning is the whole point.</p>
+    <h3 class="sub-h">leads — the dimension (grain: one row per lead)</h3>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Column</th><th>Role</th><th>Why it belongs here</th></tr>
+      <tr><td><code class="inline">lead_id</code></td><td>Primary key</td><td>Uniquely names the lead so events can point back to it.</td></tr>
+      <tr><td><code class="inline">created_at</code></td><td>attribute</td><td>When the lead first appeared — a fixed fact (change test).</td></tr>
+      <tr><td><code class="inline">source_raw</code></td><td>attribute</td><td>The channel as it arrived, uncleaned. Fixed fact; kept raw on purpose.</td></tr>
+      <tr><td><code class="inline">campaign</code></td><td>attribute</td><td>Which campaign produced it. Fixed. Nullable — some leads have none.</td></tr>
+      <tr><td><code class="inline">region</code></td><td>attribute</td><td>Geography of the lead. Fixed. A second dimension to slice by.</td></tr>
+    </table></div>
+    <p><b>Deliberately absent:</b> <code class="inline">current_stage</code> (fails the change test → it's an event) and any <code class="inline">spend</code> column (wrong grain).</p>
+
+    <h3 class="sub-h">lead_stage_events — a fact table (grain: one row per lead per stage-entry)</h3>
     ${diagram('grain')}
-    <p><b>Columns:</b> <code class="inline">event_id</code> (PK), <code class="inline">lead_id</code> (FK → leads), <code class="inline">stage</code> (a value: created/mql/sql/opportunity/closed_won/closed_lost), <code class="inline">event_at</code>. A stuck lead simply has <b>no</b> closed row — that absence <i>is</i> the censoring.</p>
-    <h3 class="sub-h">spend — a fact table (money over time)</h3>
-    <p><b>Grain:</b> one row = one channel on one day. <b>Columns:</b> <code class="inline">spend_id</code> (PK), <code class="inline">channel</code>, <code class="inline">spend_date</code>, <code class="inline">amount</code>, optional <code class="inline">impressions</code>/<code class="inline">clicks</code>.</p>
-    <p><b>Why spend is NOT a column on leads:</b> you spend on a <i>channel over time</i>, not on an individual lead. Cost-per-lead is a <b>ratio</b> you compute by rolling both tables up to a common grain — never a stored column.</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Column</th><th>Role</th><th>Why it belongs here</th></tr>
+      <tr><td><code class="inline">event_id</code></td><td>Primary key</td><td>Names each individual event.</td></tr>
+      <tr><td><code class="inline">lead_id</code></td><td>Foreign key → leads</td><td>Which lead this happened to; enforces referential integrity.</td></tr>
+      <tr><td><code class="inline">stage</code></td><td>the measure</td><td>A <i>value</i> (created/mql/sql/opportunity/closed_won/closed_lost), never a separate table.</td></tr>
+      <tr><td><code class="inline">event_at</code></td><td>timestamp</td><td>When this stage was entered — the column that makes durations and cohorts possible.</td></tr>
+    </table></div>
+    <p><b>How censoring lives here:</b> a lead stuck in SQL simply has <b>no</b> closed_won/closed_lost row. The <i>absence</i> of the row is the censoring — there's nothing to "mark," which is exactly why naïve averages miss it.</p>
+
+    <h3 class="sub-h">spend — a fact table (grain: one row per channel per day)</h3>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Column</th><th>Role</th><th>Why it belongs here</th></tr>
+      <tr><td><code class="inline">spend_id</code></td><td>Primary key</td><td>Names each channel-day of spend.</td></tr>
+      <tr><td><code class="inline">channel</code></td><td>attribute</td><td>Stored <i>clean</i> here — you'll reconcile it against the dirty <code class="inline">source_raw</code> later.</td></tr>
+      <tr><td><code class="inline">spend_date</code></td><td>the day</td><td>Spend is a per-day fact.</td></tr>
+      <tr><td><code class="inline">amount</code></td><td>the measure</td><td>Dollars that day. <code class="inline">NUMERIC</code> — never a float.</td></tr>
+      <tr><td><code class="inline">impressions</code>, <code class="inline">clicks</code></td><td>optional measures</td><td>Enable richer efficiency metrics (click-through, cost-per-click).</td></tr>
+    </table></div>
+    <p><b>The relationships in one breath:</b> <code class="inline">lead_stage_events.lead_id</code> → <code class="inline">leads.lead_id</code> (many events per lead). <code class="inline">spend.channel</code> relates to <code class="inline">leads.source_raw</code> only <i>after</i> you normalize and aggregate — they're different grains and must never be joined row-to-row (that's the fan-out from Module 1).</p>
   `)}
-  ${callout('turn','Your turn — write the CREATE TABLE statements','✍️',`<p>Each column needs a <b>type</b>: <code class="inline">INTEGER</code>, <code class="inline">TEXT</code>, <code class="inline">TIMESTAMP</code>, <code class="inline">DATE</code>, <code class="inline">NUMERIC</code> (money). Write all three yourself. Hit a syntax wall? Look up the specific piece — don't copy the whole thing.</p>`)}
+
+  ${callout('turn','Your turn — write the CREATE TABLE statements','✍️',`<p>A <code class="inline">CREATE TABLE</code> statement names the table, lists its columns, and gives each column a <b>type</b> (from the data-types card above). Write all three yourself, adding <code class="inline">PRIMARY KEY</code>, <code class="inline">NOT NULL</code>, and the foreign key where they belong. Hit a syntax wall? Look up that one specific piece — don't copy the whole block.</p>`)}
   ${reveal('Reveal reference DDL — with every clause explained',`
     ${code('sql',`CREATE TABLE leads (
     lead_id     INTEGER PRIMARY KEY,   -- unique + not null
