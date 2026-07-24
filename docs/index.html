@@ -375,12 +375,27 @@ const MODULES=[
     ${code('sql',"SELECT channel, COUNT(*)\nFROM leads\nWHERE region = 'EMEA'\nGROUP BY channel;",'"How many leads per channel, but only for EMEA?"')}
     <p>That's the whole job of this project: put marketing data into tables, then write SQL questions against it. You are not "coding" in the scary sense — you're describing <i>what you want</i> and letting the database figure out how to get it.</p>
     <p><b>PostgreSQL</b> (or "Postgres") is the specific database program we use. It's free, open-source, and the one you'll see most often in real analyst job postings — so it's worth having on your résumé by name.</p>`),
+  concept('💬','What is psql? (PostgreSQL vs. the tool that talks to it)',
+   `<p>This trips up nearly everyone, because two things share the word "Postgres." They are <b>not</b> the same:</p>
+    <div class="tbl-wrap"><table class="data">
+      <tr><th>Name</th><th>What it is</th><th>Analogy</th></tr>
+      <tr><td><b>PostgreSQL</b></td><td>the <b>database itself</b> — it stores your data and does the work</td><td>the kitchen</td></tr>
+      <tr><td><b>psql</b></td><td>a little <b>text tool for talking to</b> PostgreSQL by typing</td><td>a plain paper order pad</td></tr>
+    </table></div>
+    <p>The name is literally <b>"PostgreSQL" + "client"</b> → <code class="inline">psql</code>. When you type <code class="inline">psql marketing_funnel</code> in Terminal, you launch this tool and point it at your database. The prompt then becomes <code class="inline">marketing_funnel=#</code>, and whatever SQL you type gets carried to PostgreSQL and answered.</p>
+    <p>Three things that make it click:</p>
+    <ul>
+      <li>You did <b>not</b> install <code class="inline">psql</code> separately — it came <b>bundled with PostgreSQL</b>. One install, two pieces: the database, and the tool to talk to it.</li>
+      <li><code class="inline">psql</code> is <i>not the only</i> way in. The TablePlus app does the exact same job with a nice clickable window. <code class="inline">psql</code> is the <b>text</b> version; TablePlus is the <b>graphical</b> version. Both are "clients" talking to the same PostgreSQL.</li>
+      <li><code class="inline">psql --version</code> just asks the tool "what version are you?" — which is why it also serves as your "is Postgres installed?" check.</li>
+    </ul>
+    ${callout('tip','One line to remember','📌',`<p>PostgreSQL is the <b>database</b>; <code class="inline">psql</code> is the little <b>typing tool</b> you use to talk to it.</p>`)}`),
   concept('🔌','Client vs. server — the shape of every database',
    `<p>A database has two halves, and knowing the split will save you an hour of confusion later.</p>
     <p><b>Restaurant analogy.</b> The <b>server</b> is the kitchen: it runs in the back, holds all the ingredients (your data), and does the actual work. The <b>client</b> is the waiter: it takes your order (your SQL), carries it to the kitchen, and brings back the plate (your results). You never walk into the kitchen — you talk to the waiter.</p>
     <ul>
       <li>The <b>server</b> here is PostgreSQL running in the background. It must be <i>started</i> for anything to work — a closed kitchen serves no one. That's why Step 1 below is "start the server."</li>
-      <li>The <b>client</b> is whatever you type into: <code class="inline">psql</code> (a text client) or a point-and-click app like TablePlus. You can have many clients talking to one server.</li>
+      <li>The <b>client</b> is whatever you type into: <code class="inline">psql</code> (the text tool from the card above) or a point-and-click app like TablePlus. You can have many clients talking to one server.</li>
     </ul>
     <p>Nearly every real database — Postgres, MySQL, Snowflake, BigQuery — works this way. Interviewers like to hear you name the split.</p>`)
  ],
