@@ -215,6 +215,19 @@
   .notes-foot{display:flex;justify-content:space-between;align-items:center;margin-top:14px;flex-wrap:wrap;gap:10px}
   .notes-foot #nt-status{font-size:12px;color:var(--muted)}
   .notes-actions{display:flex;gap:8px;flex-wrap:wrap}
+  /* SQL playground */
+  .sql-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0 10px}
+  .sql-run{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-weight:600;font-size:14px;cursor:pointer}
+  .sql-run:disabled{opacity:.5;cursor:default}
+  .sql-status{font-size:12px;color:var(--muted);margin-left:auto;display:flex;align-items:center;gap:6px}
+  .sql-input{width:100%;min-height:190px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13.5px;line-height:1.6;padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--code-bg);color:var(--code-ink);outline:none;resize:vertical;tab-size:2}
+  .sql-input:focus{border-color:var(--accent)}
+  .sql-out{margin-top:16px}
+  .sql-ok{color:var(--green);font-size:13px;font-weight:600;margin-bottom:8px}
+  .sql-err{color:var(--red);background:var(--red-soft);border:1px solid var(--red);border-radius:10px;padding:12px 14px;font-family:monospace;font-size:13px;white-space:pre-wrap}
+  .sql-msg{color:var(--muted);font-size:13px}
+  table.data.sql-res td{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}
+  .sql-hint{font-size:12px;color:var(--faint);margin-top:6px}
   .topbar{display:none}
   /* mobile */
   .scrim{display:none}
@@ -1236,6 +1249,7 @@ function renderNav(){
   nav.innerHTML=`<div class="nav-h">Overview</div>`+
     `<a class="nav-item ${route==='#/dash'?'active':''}" href="#/dash"><span class="ix">◆</span> Dashboard</a>`+
     `<a class="nav-item ${route==='#/notes'?'active':''}" href="#/notes"><span class="ix">✎</span> My Notes</a>`+
+    `<a class="nav-item ${route==='#/sql'?'active':''}" href="#/sql"><span class="ix">▶</span> SQL Playground</a>`+
     `<div class="nav-h">Modules</div>`+
     MODULES.map(m=>{
       const r=`#/m/${m.num}`;
@@ -1327,6 +1341,7 @@ function route(){
   const h=location.hash||'#/dash';
   if(h.startsWith('#/m/')){renderModule(h.slice(4));currentRouteKey='m'+h.slice(4);}
   else if(h==='#/notes'){renderNotes();currentRouteKey='notes';}
+  else if(h==='#/sql'){renderSQL();currentRouteKey='sql';}
   else {renderDash();currentRouteKey='dash';}
   renderNav();
   updateTimeDisplay();
@@ -1425,6 +1440,114 @@ function htmlToMarkdown(html){
     else out+=inner;
   });return out;};
   return walk(tmp).replace(new RegExp(NL+'{3,}','g'),NL+NL).trim();
+}
+
+/* ---------- SQL Playground (real Postgres in the browser via PGlite/WASM) ---------- */
+let pgdb=null, pgLoading=null;
+function ensurePG(setStatus){
+  if(pgdb)return Promise.resolve(pgdb);
+  if(pgLoading)return pgLoading;
+  setStatus('◷ Loading Postgres (WebAssembly) — first time can take a few seconds…');
+  pgLoading=import('https://cdn.jsdelivr.net/npm/@electric-sql/pglite@0.2.17/dist/index.js')
+    .then(mod=>mod.PGlite.create({dataDir:'idb://mfa-practice'}))   // persisted in your browser (IndexedDB)
+    .then(db=>{pgdb=db;setStatus('● Ready — real Postgres, running in your browser');return db;})
+    .catch(e=>{pgLoading=null;setStatus('✕ Could not load Postgres: '+e.message+' (needs an internet connection the first time)');throw e;});
+  return pgLoading;
+}
+function sqlSetStatus(t){const s=document.getElementById('sql-status');if(s)s.textContent=t;}
+async function runSQL(){
+  const ed=document.getElementById('sql-input'),out=document.getElementById('sql-out');
+  const sql=(ed.value||'').trim();if(!sql)return;
+  out.innerHTML='<div class="sql-msg">Running…</div>';
+  try{
+    const db=await ensurePG(sqlSetStatus);
+    const res=await db.exec(sql);                 // array of {rows, fields, affectedRows}
+    const withRows=[...res].reverse().find(r=>r.rows&&r.rows.length);
+    renderSQLResult(withRows||res[res.length-1],res.length);
+  }catch(e){out.innerHTML='<div class="sql-err">✕ '+esc(e.message||String(e))+'</div>';}
+}
+function fmtCell(v){return v===null||v===undefined?'NULL':(v instanceof Date?v.toISOString():String(v));}
+function renderSQLResult(r,nStatements){
+  const out=document.getElementById('sql-out');
+  if(!r||!r.rows||!r.rows.length){
+    out.innerHTML='<div class="sql-ok">✓ Ran successfully'+(nStatements>1?(' ('+nStatements+' statements)'):'')+'. No rows returned.</div>';return;
+  }
+  const cols=(r.fields||[]).map(f=>f.name);
+  const head='<tr>'+cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr>';
+  const rows=r.rows.map(row=>'<tr>'+cols.map(c=>'<td>'+esc(fmtCell(row[c]))+'</td>').join('')+'</tr>').join('');
+  out.innerHTML='<div class="sql-ok">✓ '+r.rows.length+' row'+(r.rows.length===1?'':'s')+'</div>'+
+    '<div class="tbl-wrap"><table class="data sql-res">'+head+rows+'</table></div>';
+}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+async function seedSampleData(){
+  const db=await ensurePG(sqlSetStatus);
+  sqlSetStatus('◷ Building a sample dataset…');
+  const rnd=mulberry32(42),DAY=86400000;
+  const START=new Date('2025-01-01T00:00:00Z'),TODAY=new Date('2025-07-24T00:00:00Z');
+  const span=Math.round((TODAY-START)/DAY);
+  const ch={google:{w:40,q:1.0,s:['google','Google','Google Ads','GOOGLE']},linkedin:{w:25,q:1.4,s:['linkedin','LinkedIn','Linkedin']},webinar:{w:15,q:1.8,s:['webinar','Webinar','WEBINAR']},organic:{w:20,q:0.7,s:['organic','Organic','organic search']}};
+  const names=Object.keys(ch),wts=names.map(n=>ch[n].w),wsum=wts.reduce((a,b)=>a+b,0);
+  const pick=()=>{let r=rnd()*wsum;for(let i=0;i<names.length;i++){r-=wts[i];if(r<=0)return names[i];}return names[0];};
+  const expo=m=>-Math.log(1-rnd())*m;
+  const BASE={mql:.55,sql:.45,opp:.40,won:.30},DELAY={mql:3,sql:10,opp:25,closed:45};
+  const iso=d=>d.toISOString().slice(0,19).replace('T',' ');
+  const leads=[],events=[];let eid=1;
+  for(let lid=1;lid<=800;lid++){
+    const created=new Date(START.getTime()+Math.floor(rnd()*span)*DAY+Math.floor(rnd()*24)*3600000);
+    const c=pick(),src=ch[c].s[Math.floor(rnd()*ch[c].s.length)],q=ch[c].q;
+    leads.push('('+lid+",'"+iso(created)+"','"+src+"','campaign_"+(1+Math.floor(rnd()*6))+"','"+['NA','EMEA','APAC'][Math.floor(rnd()*3)]+"')");
+    const emit=(stage,when)=>{if(when>TODAY)return false;events.push('('+(eid++)+','+lid+",'"+stage+"','"+iso(when)+"')");return true;};
+    emit('created',created);let t=created;
+    if(rnd()<Math.min(BASE.mql*q,.95)){t=new Date(t.getTime()+expo(DELAY.mql)*DAY);if(!emit('mql',t))continue;
+      if(rnd()<Math.min(BASE.sql*q,.95)){t=new Date(t.getTime()+expo(DELAY.sql)*DAY);if(!emit('sql',t))continue;
+        if(rnd()<Math.min(BASE.opp*q,.95)){t=new Date(t.getTime()+expo(DELAY.opp)*DAY);if(!emit('opportunity',t))continue;
+          t=new Date(t.getTime()+expo(DELAY.closed)*DAY);emit(rnd()<Math.min(BASE.won*q,.95)?'closed_won':'closed_lost',t);}}}
+  }
+  const spend=[];let sid=1;const budget={google:500,linkedin:350,webinar:150,organic:40};
+  for(let d=0;d<=span;d++){const day=new Date(START.getTime()+d*DAY),ds=day.toISOString().slice(0,10);
+    for(const c of names){const amt=(budget[c]*(0.7+rnd()*0.6));const imp=Math.floor(amt*(80+rnd()*40));const clk=Math.floor(imp*(0.01+rnd()*0.03));
+      spend.push('('+(sid++)+",'"+c+"','"+ds+"',"+amt.toFixed(2)+','+imp+','+clk+')');}}
+  await db.exec(
+    'DROP TABLE IF EXISTS lead_stage_events; DROP TABLE IF EXISTS spend; DROP TABLE IF EXISTS leads;'+
+    'CREATE TABLE leads(lead_id INTEGER PRIMARY KEY, created_at TIMESTAMP NOT NULL, source_raw TEXT NOT NULL, campaign TEXT, region TEXT);'+
+    'CREATE TABLE lead_stage_events(event_id INTEGER PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES leads(lead_id), stage TEXT NOT NULL, event_at TIMESTAMP NOT NULL);'+
+    'CREATE TABLE spend(spend_id INTEGER PRIMARY KEY, channel TEXT NOT NULL, spend_date DATE NOT NULL, amount NUMERIC(10,2) NOT NULL, impressions INTEGER, clicks INTEGER);'+
+    'INSERT INTO leads VALUES '+leads.join(',')+';'+
+    'INSERT INTO lead_stage_events VALUES '+events.join(',')+';'+
+    'INSERT INTO spend VALUES '+spend.join(',')+';'
+  );
+  sqlSetStatus('● Ready — sample data loaded ('+leads.length+' leads, '+events.length+' events, '+spend.length+' spend rows)');
+  document.getElementById('sql-out').innerHTML='<div class="sql-ok">✓ Sample dataset loaded into 3 tables: leads, lead_stage_events, spend. Try a query!</div>';
+}
+const SQL_STARTER="-- A real PostgreSQL database, running inside this page.\n-- Type SQL and press Run (or Cmd/Ctrl + Enter).\n\nSELECT 'hello, Postgres' AS message;";
+function renderSQL(){
+  view.innerHTML=`
+    <span class="eyebrow">Practice · no terminal needed</span>
+    <h1 class="page">SQL Playground</h1>
+    <p class="sub">A genuine PostgreSQL engine running right here in your browser (via WebAssembly). Write queries, see results, and it all saves between visits. This is a sandbox for practising — separate from your real local database.</p>
+    <div class="sql-bar">
+      <button class="sql-run" id="sql-run">▶ Run <span style="opacity:.7;font-weight:400">⌘/Ctrl+↵</span></button>
+      <button class="ghost" id="sql-seed">⤓ Load sample data</button>
+      <button class="ghost" id="sql-tables">≡ List my tables</button>
+      <button class="ghost" id="sql-reset">↺ Reset database</button>
+      <span class="sql-status" id="sql-status">◌ Postgres will start on first Run</span>
+    </div>
+    <textarea class="sql-input" id="sql-input" spellcheck="false">${SQL_STARTER}</textarea>
+    <p class="sql-hint">Tip: haven't built the tables yet? Click <b>Load sample data</b> to get the project's three tables filled with realistic data, then practise the module queries here.</p>
+    <div class="sql-out" id="sql-out"></div>`;
+  const ed=document.getElementById('sql-input');
+  document.getElementById('sql-run').addEventListener('click',runSQL);
+  ed.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();runSQL();}});
+  document.getElementById('sql-seed').addEventListener('click',()=>seedSampleData().catch(e=>sqlSetStatus('✕ '+e.message)));
+  document.getElementById('sql-tables').addEventListener('click',()=>{
+    ed.value="SELECT table_name FROM information_schema.tables\nWHERE table_schema='public'\nORDER BY table_name;";runSQL();
+  });
+  document.getElementById('sql-reset').addEventListener('click',async()=>{
+    if(!confirm('Drop the three project tables from the playground?'))return;
+    try{const db=await ensurePG(sqlSetStatus);await db.exec('DROP TABLE IF EXISTS lead_stage_events; DROP TABLE IF EXISTS spend; DROP TABLE IF EXISTS leads;');
+      document.getElementById('sql-out').innerHTML='<div class="sql-ok">✓ Tables dropped. Clean slate.</div>';}catch(e){sqlSetStatus('✕ '+e.message);}
+  });
+  window.scrollTo(0,0);
 }
 
 /* ---------- events ---------- */
