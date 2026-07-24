@@ -453,45 +453,56 @@ const MODULES=[
   </ul>
 
   <h2 class="sec">1 · Start the database server</h2>
-  <p><b>In your Terminal window</b> (prompt ends in <code class="inline">%</code>), first confirm Postgres exists, then start the background server (the "kitchen"). Type each line and press Enter:</p>
+  <p>Back to the kitchen/waiter split: the <b>server</b> (PostgreSQL) is the kitchen that holds your data and does the work, and it has to be <i>running</i> before anyone can order anything. Two things surprise beginners here: installing Postgres did <i>not</i> automatically start it, and even once you start it, it shuts down when you reboot your Mac. So Step 1 is simply "open the kitchen." <b>In your Terminal window</b> (the one whose prompt ends in <code class="inline">%</code>), type these two lines, pressing Enter after each:</p>
   ${code('bash','psql --version\nbrew services start postgresql@16','Type this in your Terminal window (not the Claude Code chat)')}
-  <p><code class="inline">psql --version</code> is also your <b>"is it installed?" check</b> — if it prints a version number (like <code class="inline">psql (PostgreSQL) 16.2</code>), Postgres is installed and you're good. "command not found" means it isn't (see the troubleshooting note).</p>
+  <p><b>Line 1 · <code class="inline">psql --version</code></b> asks the psql tool to print which version it is. It doubles as your "is Postgres even installed?" check. You should see something like this printed back:</p>
+  ${code('bash','psql (PostgreSQL) 16.2','What Postgres prints back — a version number means it is installed')}
+  <p>If instead you see <code class="inline">command not found</code>, Postgres isn't installed or isn't on your PATH (the troubleshooting note handles that).</p>
+  <p><b>Line 2 · <code class="inline">brew services start postgresql@16</code></b> starts the kitchen. <b>Homebrew</b> (<code class="inline">brew</code>) is the app that installed Postgres for you, and its "services" feature keeps background programs running. This line tells Homebrew to start the Postgres server now <i>and</i> to restart it automatically every time you reboot — so this is a one-time thing. Success looks like:</p>
+  ${code('bash','==> Successfully started postgresql@16','The kitchen is now open, and will re-open itself after reboots')}
+  <p>Any time you want to double-check the server is running, <code class="inline">brew services list</code> shows every service and whether its status says <code class="inline">started</code>.</p>
   ${callout('warn','If that errors','⚠️',`<p>If <code class="inline">brew services start postgresql@16</code> says "No available formula," your version number differs. Run <code class="inline">brew services list</code> to see the real name (e.g. <code class="inline">postgresql@17</code>) and use that. If <code class="inline">psql</code> is "command not found," Postgres isn't on your PATH — run <code class="inline">brew install postgresql@16</code> and try again.</p>`)}
 
   <h2 class="sec">2 · Create your project database</h2>
-  <p>One Postgres server can hold many independent databases — like many binders in one filing cabinet. <b>Still in the same Terminal window</b>, create one for this project, then connect to it:</p>
-  ${code('bash','createdb marketing_funnel\npsql marketing_funnel','Still in Terminal')}
-  <p>Watch the prompt change from <code class="inline">priya@MacBook ~ %</code> to <code class="inline">marketing_funnel=#</code>. <b>That change means you just moved from the Terminal into the database</b> — you're now "inside" psql, and it's expecting SQL. Type these three there (note the backslash — <code class="inline">\\</code> commands are psql shortcuts, not SQL):</p>
+  <p>The server is running, but right now it's an <i>empty</i> kitchen — there's no data and, in fact, no database of our own yet. A single Postgres server can hold <b>many separate databases</b>, like many labelled binders in one filing cabinet. Giving this project its own binder means nothing you do here can collide with anything else on your machine, and you can wipe it and start over without touching anything else. <b>Still in the same Terminal window</b> (prompt still ends in <code class="inline">%</code>), run:</p>
+  ${code('bash','createdb marketing_funnel','Creates a new, empty database named marketing_funnel')}
+  <p><code class="inline">createdb</code> is a small command that makes one brand-new, empty database with the name you give it. Here's a thing that trips people up: when it works, it prints <b>nothing at all</b> and just drops you back at the <code class="inline">%</code> prompt. In the terminal, <b>silence usually means success</b> — no news is good news. Now connect to the database you just made:</p>
+  ${code('bash','psql marketing_funnel','Launches the psql tool and connects it to your new database')}
+  <p>This launches the psql tool (from the concept card above) and points it at your <code class="inline">marketing_funnel</code> database. You'll see a short welcome banner, and then — the part that matters — <b>your prompt changes</b>:</p>
+  ${code('bash','priya@MacBook ~ %       <-- BEFORE: the plain Terminal (the shell)\nmarketing_funnel=#      <-- AFTER: you are now INSIDE psql','Your prompt is a you-are-here sign — glance at it constantly')}
+  <p>That <code class="inline">marketing_funnel=#</code> is psql announcing: "you're inside the database now, and I'm expecting SQL." (The <code class="inline">=#</code> is just psql's prompt style; the part before it is your database's name.) This tiny detail is the single most useful habit in the whole setup — <b>the prompt always tells you which of the two places you're typing into.</b></p>
+  <p>Now try these three commands, one at a time. Two of them are <i>psql shortcuts</i> (they begin with a backslash and take <b>no</b> semicolon); the third is <i>real SQL</i> (and every SQL statement ends with a semicolon):</p>
   <div class="tbl-wrap"><table class="data">
-    <tr><th>Type this</th><th>What it does</th></tr>
-    <tr><td><code class="inline">\\dt</code></td><td>List the tables (none yet — that's expected)</td></tr>
-    <tr><td><code class="inline">\\q</code></td><td>Quit, back to the normal terminal</td></tr>
-    <tr><td><code class="inline">SELECT 1;</code></td><td>A trivial query. If it returns <code class="inline">1</code>, everything works.</td></tr>
+    <tr><th>Type this</th><th>What it does</th><th>What you'll see</th></tr>
+    <tr><td><code class="inline">\\dt</code></td><td>Lists the tables in this database</td><td><code class="inline">Did not find any relations.</code> — that's correct, you haven't built tables yet!</td></tr>
+    <tr><td><code class="inline">SELECT 1;</code></td><td>A trivial SQL query (note the semicolon)</td><td>A little two-line table showing the value <code class="inline">1</code> — proof the database understands SQL.</td></tr>
+    <tr><td><code class="inline">\\q</code></td><td>Quits psql, back to the Terminal</td><td>Your prompt returns to <code class="inline">%</code>.</td></tr>
   </table></div>
-  ${callout('warn','If that errors','⚠️',`<p><code class="inline">database "marketing_funnel" already exists</code> just means you ran it twice — harmless, skip to <code class="inline">psql marketing_funnel</code>. <code class="inline">role "yourname" does not exist</code> means Postgres has no user matching your Mac account — run <code class="inline">createuser -s $(whoami)</code> once, then retry.</p>`)}
+  <p><b>Why the semicolon matters.</b> A single SQL statement can span many lines, so psql waits for a <code class="inline">;</code> to know you're done. If you press Enter without one, the prompt changes to <code class="inline">marketing_funnel-#</code> (note the <b>dash</b> instead of <code class="inline">=</code>) — that's psql quietly saying "I'm still waiting for the rest of your statement." Don't panic: just type <code class="inline">;</code> and Enter. Backslash commands like <code class="inline">\\dt</code> are psql's own shortcuts, not SQL, which is why they don't take a semicolon.</p>
+  ${callout('warn','If that errors','⚠️',`<p><code class="inline">database "marketing_funnel" already exists</code> just means you ran it twice — harmless, skip straight to <code class="inline">psql marketing_funnel</code>. <code class="inline">role "yourname" does not exist</code> means Postgres has no user matching your Mac account — run <code class="inline">createuser -s $(whoami)</code> once, then retry.</p>`)}
 
   <h2 class="sec">3 · Get a friendly window (strongly recommended)</h2>
-  <p>Typing long queries into the terminal is genuinely painful — no scrolling back, no colors, results as raw text. Install a <b>GUI client</b>: a real editor where you write queries and see results as a clean grid. This one choice will make the whole project more pleasant.</p>
+  <p>psql works, but typing long queries into it gets painful fast — no easy scrolling, no colors, results shown as cramped text. A <b>GUI client</b> is a separate app that does the <i>exact same job</i> (it's just another client — another waiter talking to the same kitchen) but with a proper editor and results shown as a clean, clickable grid. Installing one makes the whole project noticeably more pleasant, and it's what you'd actually use on the job. Pick one:</p>
   <div class="tbl-wrap"><table class="data">
     <tr><th>Option</th><th>Notes</th></tr>
-    <tr><td><b>TablePlus</b> — tableplus.com</td><td>Easiest to learn. Free tier is plenty for this project.</td></tr>
-    <tr><td><b>DBeaver</b> — dbeaver.io</td><td>Completely free and open-source; a little busier.</td></tr>
+    <tr><td><b>TablePlus</b> — tableplus.com</td><td>Easiest to learn. The free tier is plenty for this project.</td></tr>
+    <tr><td><b>DBeaver</b> — dbeaver.io</td><td>Completely free and open-source; a little busier to look at.</td></tr>
   </table></div>
-  <p>In the app, create a new <b>PostgreSQL</b> connection with these settings:</p>
+  <p>Download one, open the downloaded file, and drag the app into your <b>Applications</b> folder. Open it and create a new <b>PostgreSQL</b> connection. Each field below just tells the client <i>which</i> kitchen to talk to — this is the client/server split made concrete:</p>
   <div class="tbl-wrap"><table class="data">
-    <tr><th>Field</th><th>Value</th></tr>
-    <tr><td>Host</td><td><code class="inline">localhost</code> (your own computer)</td></tr>
-    <tr><td>Port</td><td><code class="inline">5432</code> (Postgres's default door number)</td></tr>
-    <tr><td>Database</td><td><code class="inline">marketing_funnel</code></td></tr>
-    <tr><td>User</td><td>your Mac username</td></tr>
-    <tr><td>Password</td><td>leave blank</td></tr>
+    <tr><th>Field</th><th>Value</th><th>What it means</th></tr>
+    <tr><td>Host</td><td><code class="inline">localhost</code></td><td>"the database is on this same computer"</td></tr>
+    <tr><td>Port</td><td><code class="inline">5432</code></td><td>the default "door number" Postgres listens on</td></tr>
+    <tr><td>Database</td><td><code class="inline">marketing_funnel</code></td><td>which binder to open</td></tr>
+    <tr><td>User</td><td>your Mac username</td><td>who's connecting</td></tr>
+    <tr><td>Password</td><td>leave blank</td><td>local Postgres trusts your Mac account</td></tr>
   </table></div>
-  <p>Click Connect. You now have a comfortable home for the rest of the project.</p>
+  <p>Click Connect. To prove it works, open a query tab and run <code class="inline">SELECT 1;</code> — you should get a grid with a single cell showing <code class="inline">1</code>. Same query, same database as in psql, just a friendlier window. This is your home for the rest of the project.</p>
 
   <h2 class="sec">4 · Save your progress with Git</h2>
-  <p><b>Git</b> takes a snapshot of your work you can always return to — think "save points" in a game, stored both on your Mac and on GitHub. You don't need to master it. Whenever you finish something meaningful, run these three commands from your project folder:</p>
+  <p><b>Git</b> is a "save point" system for your files. Each save (called a <b>commit</b>) is a labelled snapshot you can always return to, and pushing sends a copy up to <b>GitHub</b> so your work is backed up online and can't be lost. The good news: your project folder is <i>already</i> a git repository, so there's nothing to set up — you just save as you go. You don't need to master git; these three commands, run in Terminal from your project folder, cover everything:</p>
   ${code('bash','git add -A\ngit commit -m "Describe what you just did"\ngit push')}
-  <p><code class="inline">add</code> stages your changes, <code class="inline">commit</code> saves a snapshot with a note, <code class="inline">push</code> uploads it to GitHub. That's the whole loop.</p>
+  <p>Reading them left to right: <code class="inline">git add -A</code> gathers up every file you changed; <code class="inline">git commit -m "..."</code> saves a snapshot with a short note to your future self; <code class="inline">git push</code> uploads that snapshot to GitHub. Run this little loop whenever you finish something meaningful — a working data generator, a query you're proud of — so you can always get back to a version that worked.</p>
 
   ${callout('turn','Your turn — prove the whole chain works','✍️',`<p>Before leaving this module: start the server, open your GUI client, connect to <code class="inline">marketing_funnel</code>, and run <code class="inline">SELECT 1;</code>. Seeing a result grid with a single <code class="inline">1</code> in it means the kitchen is open, the waiter is connected, and you're ready to build. If it fails, the error almost always matches a troubleshooting note above.</p>`)}
  `,
