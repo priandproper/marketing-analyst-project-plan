@@ -228,6 +228,40 @@
   .sql-msg{color:var(--muted);font-size:13px}
   table.data.sql-res td{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;white-space:nowrap}
   .sql-hint{font-size:12px;color:var(--faint);margin-top:6px}
+  /* per-page notes drawer (right) */
+  .pn-toggle{position:fixed;right:0;top:42%;z-index:30;background:var(--accent);color:#fff;border:none;border-radius:10px 0 0 10px;padding:14px 7px;font-size:11px;font-weight:700;letter-spacing:.06em;cursor:pointer;box-shadow:var(--shadow);writing-mode:vertical-rl;text-orientation:mixed}
+  .pn-toggle .pn-dot{display:none;width:7px;height:7px;border-radius:50%;background:#fff;margin:0 auto 6px}
+  .pn-toggle.has-note .pn-dot{display:block}
+  .pn-drawer{position:fixed;top:0;right:0;height:100vh;width:380px;max-width:92vw;background:var(--panel);border-left:1px solid var(--line);box-shadow:-8px 0 30px rgba(0,0,0,.14);z-index:47;display:flex;flex-direction:column;transform:translateX(101%);transition:transform .25s ease}
+  .pn-drawer.open{transform:none}
+  .pn-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .pn-head h3{margin:0;font-size:14px;flex:1;line-height:1.3}
+  .pn-x{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;width:30px;height:30px;cursor:pointer;color:var(--muted);flex:0 0 auto}
+  .pn-tb{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line-2)}
+  .pn-tb button{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;line-height:1;cursor:pointer;color:var(--ink);min-width:28px}
+  .pn-tb button:hover{background:var(--accent-soft);border-color:var(--accent)}
+  .pn-ed{flex:1;overflow-y:auto;padding:16px 18px;outline:none;font-size:14.5px;line-height:1.7;color:var(--ink)}
+  .pn-ed:empty::before{content:"Notes for this page — saved automatically…";color:var(--faint)}
+  .pn-ed h2{font-size:18px;margin:12px 0 6px} .pn-ed h3{font-size:15px;margin:12px 0 5px}
+  .pn-ed ul,.pn-ed ol{padding-left:22px;margin:7px 0}
+  .pn-foot{padding:9px 16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+  .pn-foot a{color:var(--accent-ink);text-decoration:none}
+  /* global SQL console dock (bottom, DevTools-style) */
+  .dock-fab{position:fixed;right:16px;bottom:16px;z-index:33;background:var(--ink);color:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+  .dock{position:fixed;left:0;right:0;bottom:0;height:42vh;min-height:200px;background:var(--panel);border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(0,0,0,.16);z-index:44;transform:translateY(101%);transition:transform .22s ease;display:flex;flex-direction:column}
+  .dock.open{transform:none}
+  .dock-grip{height:7px;cursor:ns-resize;background:linear-gradient(var(--line),transparent);flex:0 0 auto}
+  .dock-grip::after{content:"";display:block;width:40px;height:3px;border-radius:2px;background:var(--faint);margin:2px auto 0;opacity:.5}
+  .dock-head{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .dock-head b{font-size:13px}
+  .dock-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .dock-btn.ghost{background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
+  .dock-x{margin-left:auto;background:var(--panel-2);border:1px solid var(--line);border-radius:7px;width:28px;height:28px;cursor:pointer;color:var(--muted)}
+  .dock-body{flex:1;display:flex;min-height:0}
+  .dock-input{flex:0 0 42%;border:none;border-right:1px solid var(--line);border-radius:0;resize:none;min-height:0}
+  .dock-out{flex:1;overflow:auto;padding:12px 14px}
+  @media(max-width:820px){.dock{left:0} .dock-body{flex-direction:column} .dock-input{flex:0 0 45%;border-right:none;border-bottom:1px solid var(--line)}}
+  @media(min-width:821px){.dock{left:288px} .pn-drawer{width:400px}}
   .topbar{display:none}
   /* mobile */
   .scrim{display:none}
@@ -272,6 +306,39 @@
     </div>
   </aside>
   <main><div class="content" id="view"></div></main>
+</div>
+
+<!-- per-page notes drawer -->
+<button class="pn-toggle" id="pn-toggle" title="Notes for this page"><span class="pn-dot"></span>✎ NOTES</button>
+<div class="pn-drawer" id="pn-drawer">
+  <div class="pn-head"><h3 id="pn-title">Notes</h3><button class="pn-x" id="pn-x" title="Close">✕</button></div>
+  <div class="pn-tb" id="pn-tb">
+    <button data-cmd="formatBlock" data-val="H3" title="Heading">H</button>
+    <button data-cmd="bold" title="Bold"><b>B</b></button>
+    <button data-cmd="italic" title="Italic"><i>I</i></button>
+    <button data-cmd="insertUnorderedList" title="Bullets">•</button>
+    <button data-cmd="insertOrderedList" title="Numbered">1.</button>
+    <button data-cmd="removeFormat" title="Clear">⌫</button>
+  </div>
+  <div class="pn-ed" id="pn-ed" contenteditable="true" spellcheck="true"></div>
+  <div class="pn-foot"><span id="pn-saved">Saved ✓</span><a href="#/notes">Global notes →</a></div>
+</div>
+
+<!-- global SQL console dock (DevTools-style) -->
+<button class="dock-fab" id="dock-fab" title="SQL console">▤ SQL</button>
+<div class="dock" id="dock">
+  <div class="dock-grip" id="dock-grip"></div>
+  <div class="dock-head">
+    <b>SQL Console</b>
+    <button class="dock-btn" id="dock-run">▶ Run <span style="opacity:.7;font-weight:400">⌘/Ctrl+↵</span></button>
+    <button class="dock-btn ghost" id="dock-seed">⤓ Sample data</button>
+    <span class="sql-status js-sqlstatus" id="dock-status">◌ starts on first Run</span>
+    <button class="dock-x" id="dock-close" title="Close">✕</button>
+  </div>
+  <div class="dock-body">
+    <textarea class="sql-input dock-input" id="dock-input" spellcheck="false"></textarea>
+    <div class="sql-out dock-out" id="dock-out"></div>
+  </div>
 </div>
 
 <script>
@@ -1339,10 +1406,10 @@ function renderModule(num){
 
 function route(){
   const h=location.hash||'#/dash';
-  if(h.startsWith('#/m/')){renderModule(h.slice(4));currentRouteKey='m'+h.slice(4);}
-  else if(h==='#/notes'){renderNotes();currentRouteKey='notes';}
-  else if(h==='#/sql'){renderSQL();currentRouteKey='sql';}
-  else {renderDash();currentRouteKey='dash';}
+  if(h.startsWith('#/m/')){const num=h.slice(4);renderModule(num);currentRouteKey='m'+num;const mm=MODULES.find(x=>x.num===num);loadPageNotes('m'+num,mm?('Module '+num+' — '+mm.title):('Module '+num));}
+  else if(h==='#/notes'){renderNotes();currentRouteKey='notes';loadPageNotes('notes');}
+  else if(h==='#/sql'){renderSQL();currentRouteKey='sql';loadPageNotes('sql');}
+  else {renderDash();currentRouteKey='dash';loadPageNotes('dash','Dashboard');}
   renderNav();
   updateTimeDisplay();
   closeSidebar();
@@ -1454,21 +1521,22 @@ function ensurePG(setStatus){
     .catch(e=>{pgLoading=null;setStatus('✕ Could not load Postgres: '+e.message+' (needs an internet connection the first time)');throw e;});
   return pgLoading;
 }
-function sqlSetStatus(t){const s=document.getElementById('sql-status');if(s)s.textContent=t;}
-async function runSQL(){
-  const ed=document.getElementById('sql-input'),out=document.getElementById('sql-out');
+function sqlSetStatus(t){document.querySelectorAll('.js-sqlstatus').forEach(e=>e.textContent=t);}
+async function runSQL(inId,outId){
+  inId=inId||'sql-input';outId=outId||'sql-out';
+  const ed=document.getElementById(inId),out=document.getElementById(outId);
   const sql=(ed.value||'').trim();if(!sql)return;
   out.innerHTML='<div class="sql-msg">Running…</div>';
   try{
     const db=await ensurePG(sqlSetStatus);
     const res=await db.exec(sql);                 // array of {rows, fields, affectedRows}
     const withRows=[...res].reverse().find(r=>r.rows&&r.rows.length);
-    renderSQLResult(withRows||res[res.length-1],res.length);
+    renderSQLResult(outId,withRows||res[res.length-1],res.length);
   }catch(e){out.innerHTML='<div class="sql-err">✕ '+esc(e.message||String(e))+'</div>';}
 }
 function fmtCell(v){return v===null||v===undefined?'NULL':(v instanceof Date?v.toISOString():String(v));}
-function renderSQLResult(r,nStatements){
-  const out=document.getElementById('sql-out');
+function renderSQLResult(outId,r,nStatements){
+  const out=document.getElementById(outId);
   if(!r||!r.rows||!r.rows.length){
     out.innerHTML='<div class="sql-ok">✓ Ran successfully'+(nStatements>1?(' ('+nStatements+' statements)'):'')+'. No rows returned.</div>';return;
   }
@@ -1479,7 +1547,8 @@ function renderSQLResult(r,nStatements){
     '<div class="tbl-wrap"><table class="data sql-res">'+head+rows+'</table></div>';
 }
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-async function seedSampleData(){
+async function seedSampleData(outId){
+  outId=outId||'sql-out';
   const db=await ensurePG(sqlSetStatus);
   sqlSetStatus('◷ Building a sample dataset…');
   const rnd=mulberry32(42),DAY=86400000;
@@ -1517,7 +1586,7 @@ async function seedSampleData(){
     'INSERT INTO spend VALUES '+spend.join(',')+';'
   );
   sqlSetStatus('● Ready — sample data loaded ('+leads.length+' leads, '+events.length+' events, '+spend.length+' spend rows)');
-  document.getElementById('sql-out').innerHTML='<div class="sql-ok">✓ Sample dataset loaded into 3 tables: leads, lead_stage_events, spend. Try a query!</div>';
+  document.getElementById(outId).innerHTML='<div class="sql-ok">✓ Sample dataset loaded into 3 tables: leads, lead_stage_events, spend. Try a query!</div>';
 }
 const SQL_STARTER="-- A real PostgreSQL database, running inside this page.\n-- Type SQL and press Run (or Cmd/Ctrl + Enter).\n\nSELECT 'hello, Postgres' AS message;";
 function renderSQL(){
@@ -1530,13 +1599,13 @@ function renderSQL(){
       <button class="ghost" id="sql-seed">⤓ Load sample data</button>
       <button class="ghost" id="sql-tables">≡ List my tables</button>
       <button class="ghost" id="sql-reset">↺ Reset database</button>
-      <span class="sql-status" id="sql-status">◌ Postgres will start on first Run</span>
+      <span class="sql-status js-sqlstatus" id="sql-status">◌ Postgres will start on first Run</span>
     </div>
     <textarea class="sql-input" id="sql-input" spellcheck="false">${SQL_STARTER}</textarea>
-    <p class="sql-hint">Tip: haven't built the tables yet? Click <b>Load sample data</b> to get the project's three tables filled with realistic data, then practise the module queries here.</p>
+    <p class="sql-hint">Tip: haven't built the tables yet? Click <b>Load sample data</b> to get the project's three tables filled with realistic data, then practise the module queries here. The same database is shared with the SQL console at the bottom of every page.</p>
     <div class="sql-out" id="sql-out"></div>`;
   const ed=document.getElementById('sql-input');
-  document.getElementById('sql-run').addEventListener('click',runSQL);
+  document.getElementById('sql-run').addEventListener('click',()=>runSQL());
   ed.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();runSQL();}});
   document.getElementById('sql-seed').addEventListener('click',()=>seedSampleData().catch(e=>sqlSetStatus('✕ '+e.message)));
   document.getElementById('sql-tables').addEventListener('click',()=>{
@@ -1581,6 +1650,50 @@ const sidebar=document.getElementById('sidebar'),scrim=document.getElementById('
 function closeSidebar(){sidebar.classList.remove('open');scrim.classList.remove('show');}
 document.getElementById('burger').addEventListener('click',()=>{sidebar.classList.toggle('open');scrim.classList.toggle('show');});
 scrim.addEventListener('click',closeSidebar);
+
+/* ---------- per-page notes drawer ---------- */
+const pnDrawer=document.getElementById('pn-drawer'), pnEd=document.getElementById('pn-ed');
+let pnKey=null,_pnT;
+function pnSave(){if(pnKey)localStorage.setItem('mfa_pn_'+pnKey,pnEd.innerHTML);}
+function pnUpdateDot(){
+  const has=pnKey&&(localStorage.getItem('mfa_pn_'+pnKey)||'').replace(/<[^>]*>/g,'').trim().length>0;
+  document.getElementById('pn-toggle').classList.toggle('has-note',!!has);
+}
+function loadPageNotes(routeKey,title){
+  const allowed=routeKey==='dash'||routeKey[0]==='m';
+  const toggle=document.getElementById('pn-toggle');
+  if(!allowed){toggle.style.display='none';pnDrawer.classList.remove('open');pnSave();pnKey=null;return;}
+  toggle.style.display='';
+  pnSave();                                   // save the page we're leaving
+  pnKey=routeKey;
+  document.getElementById('pn-title').textContent='Notes · '+title;
+  pnEd.innerHTML=localStorage.getItem('mfa_pn_'+routeKey)||'';
+  pnUpdateDot();
+}
+document.getElementById('pn-tb').querySelectorAll('button').forEach(b=>{
+  b.addEventListener('mousedown',e=>{e.preventDefault();pnEd.focus();document.execCommand(b.getAttribute('data-cmd'),false,b.getAttribute('data-val')||undefined);pnSave();});
+});
+pnEd.addEventListener('input',()=>{const s=document.getElementById('pn-saved');s.textContent='Saving…';clearTimeout(_pnT);_pnT=setTimeout(()=>{pnSave();pnUpdateDot();s.textContent='Saved ✓';},400);});
+document.getElementById('pn-toggle').addEventListener('click',()=>{pnDrawer.classList.add('open');pnEd.focus();});
+document.getElementById('pn-x').addEventListener('click',()=>pnDrawer.classList.remove('open'));
+
+/* ---------- global SQL console dock (DevTools-style) ---------- */
+const dock=document.getElementById('dock'), dockInput=document.getElementById('dock-input');
+dockInput.value=localStorage.getItem('mfa_dock_sql')||"-- Global SQL console — same in-browser Postgres as the Playground page.\n-- Press Run, or Cmd/Ctrl + Enter.\nSELECT 'hello from the console' AS message;";
+dockInput.addEventListener('input',()=>localStorage.setItem('mfa_dock_sql',dockInput.value));
+dockInput.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();runSQL('dock-input','dock-out');}});
+function dockOpen(o){dock.classList.toggle('open',o);document.getElementById('dock-fab').style.display=o?'none':'';localStorage.setItem('mfa_dock_open',o?'1':'0');}
+document.getElementById('dock-fab').addEventListener('click',()=>dockOpen(true));
+document.getElementById('dock-close').addEventListener('click',()=>dockOpen(false));
+document.getElementById('dock-run').addEventListener('click',()=>runSQL('dock-input','dock-out'));
+document.getElementById('dock-seed').addEventListener('click',()=>seedSampleData('dock-out').catch(e=>sqlSetStatus('✕ '+e.message)));
+if(localStorage.getItem('mfa_dock_open')==='1')dockOpen(true);
+(function(){const grip=document.getElementById('dock-grip');let sy,sh;
+  const move=e=>{const y=e.touches?e.touches[0].clientY:e.clientY;let h=sh+(sy-y);h=Math.max(160,Math.min(window.innerHeight*0.9,h));dock.style.height=h+'px';if(e.cancelable)e.preventDefault();};
+  const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);document.removeEventListener('touchmove',move);document.removeEventListener('touchend',up);};
+  const down=e=>{sy=e.touches?e.touches[0].clientY:e.clientY;sh=dock.getBoundingClientRect().height;document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);document.addEventListener('touchmove',move,{passive:false});document.addEventListener('touchend',up);};
+  grip.addEventListener('mousedown',down);grip.addEventListener('touchstart',down,{passive:true});
+})();
 
 /* ---------- implicit reading timer (auto-pauses when idle or tab hidden) ---------- */
 const TIME_KEY='mfa_time_v1';
