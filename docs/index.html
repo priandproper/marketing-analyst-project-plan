@@ -387,23 +387,43 @@ const MODULES=[
  body:`
   <p class="lead">Great news: PostgreSQL and Python are <b>already installed</b> on your Mac, so you skip the painful part. This module is about <i>understanding</i> the tools (above) and getting the database running (below). If a step throws an error, read the troubleshooting note under it — most first-timers hit one of these.</p>
 
-  <h2 class="sec">The terminal, in 90 seconds</h2>
-  <p>The <b>terminal</b> is a window where you type commands instead of clicking. Open it: press <code class="inline">Cmd + Space</code>, type "Terminal", press Enter. Three rules are all you need:</p>
+  <h2 class="sec">Wait — where do I actually type all this?</h2>
+  <p>This is the question that trips up almost everyone, so let's kill the confusion before you run a single command. Right now you probably have <b>Claude Code open in one window</b> (where you chat with the AI) and <b>this course open in a browser</b>. Here's the key point:</p>
+  ${callout('warn','The commands below do NOT go into the Claude Code chat','⚠️',`<p>The Claude Code window is for <i>talking to the AI in plain English</i>. The database commands (<code class="inline">psql</code>, <code class="inline">createdb</code>, etc.) go into a <b>separate app called Terminal</b> that you open yourself and control directly. Keep them separate — that way your hands-on work is clean and it's <i>you</i> driving the database, which is the whole point of learning it.</p>`)}
+  <p>Across this project you'll type into <b>four different places</b>. They look different and expect different things. Here's the full map — bookmark it mentally:</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>Place</th><th>How you open it</th><th>The prompt looks like…</th><th>What you type here</th></tr>
+    <tr><td><b>Claude Code</b> (the AI chat)</td><td>already open</td><td>a message box</td><td>plain-English requests to the AI</td></tr>
+    <tr><td><b>Terminal</b> (your workspace)</td><td><code class="inline">Cmd + Space</code> → type "Terminal" → Enter</td><td><code class="inline">priya@MacBook ~ %</code></td><td>shell commands: <code class="inline">psql</code>, <code class="inline">createdb</code>, <code class="inline">python3</code>, <code class="inline">git</code></td></tr>
+    <tr><td><b>Inside psql</b> (the database)</td><td>run <code class="inline">psql marketing_funnel</code> <i>in</i> Terminal</td><td><code class="inline">marketing_funnel=#</code></td><td>SQL queries and <code class="inline">\\</code> commands</td></tr>
+    <tr><td><b>GUI client</b> (later, optional)</td><td>open the TablePlus app</td><td>a query editor box</td><td>SQL queries</td></tr>
+  </table></div>
+  <p><b>The single most useful skill:</b> glance at the <b>prompt</b> (the text at the start of the line) to know where you are. If it ends in <code class="inline">%</code> or <code class="inline">$</code>, you're in the plain Terminal. If it says <code class="inline">marketing_funnel=#</code>, you're inside the database and it's expecting SQL. Mixing these up — typing SQL at the <code class="inline">%</code> prompt, or <code class="inline">psql</code> inside psql — is the #1 beginner stumble.</p>
+
+  <h2 class="sec">Open your Terminal now — step by step</h2>
+  <ol>
+    <li>Press <code class="inline">Cmd + Space</code> to open Spotlight (a search bar appears mid-screen).</li>
+    <li>Type <b>Terminal</b> and press <b>Enter</b>. A plain window opens with a prompt like <code class="inline">priya@MacBook ~ %</code>.</li>
+    <li>That's it — this is <b>your window for the whole project</b>. Keep it open next to this course page. You do <i>not</i> need a new window for every command; reuse this one.</li>
+    <li>Only if a command is still running and you want to do something else: press <code class="inline">Cmd + T</code> for a new <b>tab</b> in the same window (or <code class="inline">Cmd + N</code> for a whole new window).</li>
+  </ol>
+  <p>Three rules for the Terminal and you're fluent enough:</p>
   <ul>
     <li>Type a command, press <b>Enter</b> to run it.</li>
-    <li>A command that finishes with <b>no message</b> usually <i>worked</i>. Errors are loud and red-ish.</li>
-    <li>The <code class="inline">$</code> or <code class="inline">%</code> at the start of a line is just the prompt — you don't type it.</li>
+    <li>A command that finishes with <b>no message</b> usually <i>worked</i>. Errors are loud.</li>
+    <li>Don't type the <code class="inline">$</code> or <code class="inline">%</code> — that's the prompt the computer prints, not part of your command.</li>
   </ul>
 
   <h2 class="sec">1 · Start the database server</h2>
-  <p>First confirm Postgres exists, then start the background server (the "kitchen"):</p>
-  ${code('bash','psql --version\nbrew services start postgresql@16','Confirm it exists, then start the server')}
+  <p><b>In your Terminal window</b> (prompt ends in <code class="inline">%</code>), first confirm Postgres exists, then start the background server (the "kitchen"). Type each line and press Enter:</p>
+  ${code('bash','psql --version\nbrew services start postgresql@16','Type this in your Terminal window (not the Claude Code chat)')}
+  <p><code class="inline">psql --version</code> is also your <b>"is it installed?" check</b> — if it prints a version number (like <code class="inline">psql (PostgreSQL) 16.2</code>), Postgres is installed and you're good. "command not found" means it isn't (see the troubleshooting note).</p>
   ${callout('warn','If that errors','⚠️',`<p>If <code class="inline">brew services start postgresql@16</code> says "No available formula," your version number differs. Run <code class="inline">brew services list</code> to see the real name (e.g. <code class="inline">postgresql@17</code>) and use that. If <code class="inline">psql</code> is "command not found," Postgres isn't on your PATH — run <code class="inline">brew install postgresql@16</code> and try again.</p>`)}
 
   <h2 class="sec">2 · Create your project database</h2>
-  <p>One Postgres server can hold many independent databases — like many binders in one filing cabinet. Create one just for this project, then connect to it:</p>
-  ${code('bash','createdb marketing_funnel\npsql marketing_funnel')}
-  <p>Your prompt changes to <code class="inline">marketing_funnel=#</code>. That means you're now "inside" the database, and anything you type goes to it. A few housekeeping commands (note the backslash — these are psql shortcuts, not SQL):</p>
+  <p>One Postgres server can hold many independent databases — like many binders in one filing cabinet. <b>Still in the same Terminal window</b>, create one for this project, then connect to it:</p>
+  ${code('bash','createdb marketing_funnel\npsql marketing_funnel','Still in Terminal')}
+  <p>Watch the prompt change from <code class="inline">priya@MacBook ~ %</code> to <code class="inline">marketing_funnel=#</code>. <b>That change means you just moved from the Terminal into the database</b> — you're now "inside" psql, and it's expecting SQL. Type these three there (note the backslash — <code class="inline">\\</code> commands are psql shortcuts, not SQL):</p>
   <div class="tbl-wrap"><table class="data">
     <tr><th>Type this</th><th>What it does</th></tr>
     <tr><td><code class="inline">\\dt</code></td><td>List the tables (none yet — that's expected)</td></tr>
