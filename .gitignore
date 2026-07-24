@@ -1,0 +1,15 @@
+# Generated data (rebuild with generate_data.py — don't version large CSVs)
+*.csv
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/

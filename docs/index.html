@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marketing Funnel Analytics — Console</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --panel: #ffffff;
+      --ink: #1a1c23;
+      --muted: #5b6270;
+      --line: #e4e7ec;
+      --accent: #3b5bdb;
+      --accent-soft: #eaefff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1116;
+        --panel: #171a21;
+        --ink: #e8eaed;
+        --muted: #9aa1ad;
+        --line: #262a33;
+        --accent: #7b93ff;
+        --accent-soft: #1a2036;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 64px 24px 96px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--line);
+      padding: 5px 11px;
+      border-radius: 999px;
+      margin-bottom: 22px;
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 40px);
+      line-height: 1.15;
+      margin: 0 0 14px;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      font-size: 18px;
+      color: var(--muted);
+      margin: 0 0 36px;
+      max-width: 60ch;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 26px 26px;
+      margin: 0 0 20px;
+    }
+    .panel h2 {
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      margin: 0 0 16px;
+    }
+    ol.funnel {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    ol.funnel li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--accent-soft);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    ol.funnel li span.stage { color: var(--ink); }
+    ol.funnel li span.val { color: var(--muted); font-variant-numeric: tabular-nums; }
+    ol.funnel li:nth-child(1) { width: 100%; }
+    ol.funnel li:nth-child(2) { width: 82%; }
+    ol.funnel li:nth-child(3) { width: 64%; }
+    ol.funnel li:nth-child(4) { width: 48%; }
+    ol.funnel li:nth-child(5) { width: 32%; }
+    .note {
+      font-size: 14px;
+      color: var(--muted);
+    }
+    a.btn {
+      display: inline-block;
+      margin-top: 8px;
+      color: #fff;
+      background: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 11px 20px;
+      border-radius: 9px;
+    }
+    a.link { color: var(--accent); }
+    footer {
+      margin-top: 40px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+    }
+    code {
+      background: var(--accent-soft);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <span class="badge">Placeholder · Console in progress</span>
+    <h1>Marketing Funnel Analytics</h1>
+    <p class="lede">
+      This page is the deployment target for the funnel-analytics console.
+      The hosting is live; the console itself is built as the final step of
+      the project curriculum and will replace this placeholder.
+    </p>
+
+    <div class="panel">
+      <h2>What will live here</h2>
+      <ol class="funnel">
+        <li><span class="stage">Leads</span><span class="val">stage counts</span></li>
+        <li><span class="stage">MQL → SQL</span><span class="val">conversion rates</span></li>
+        <li><span class="stage">Opportunity</span><span class="val">channel scorecard</span></li>
+        <li><span class="stage">Cohorts</span><span class="val">90-day, maturity-adjusted</span></li>
+        <li><span class="stage">Closed Won</span><span class="val">cost per customer</span></li>
+      </ol>
+    </div>
+
+    <div class="panel">
+      <h2>Follow the build</h2>
+      <p class="note">
+        The full curriculum — from database setup to this console — lives in
+        the repository.
+      </p>
+      <a class="btn" href="https://github.com/priandproper/marketing-analyst-project-plan/blob/main/CURRICULUM.md">
+        Read the curriculum →
+      </a>
+    </div>
+
+    <footer>
+      To publish the finished console, replace <code>docs/index.html</code>
+      with the console's HTML and push to <code>main</code>. GitHub Pages
+      redeploys automatically.
+    </footer>
+  </div>
+</body>
+</html>
