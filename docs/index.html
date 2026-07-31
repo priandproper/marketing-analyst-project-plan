@@ -898,10 +898,6 @@ CREATE TABLE spend (
     <tr><td>Spend per channel-day</td><td>Money set independently of leads.</td><td>The different-grain problem, made physical (Module 7).</td></tr>
   </table></div>
 
-  <h2 class="sec">Plan the algorithm in plain English first</h2>
-  <p>Never open a code editor with a blank mind. Write the logic as sentences, then translate. Here's the shape — try to write your own version before reading this one:</p>
-  ${callout('tip','The algorithm, in words','📝',`<p>For each of 2,000 leads: pick a random <b>created date</b> between Jan 1 and today. Pick a <b>channel</b> (weighted, so Google is common and webinar rare). Pick a messy <b>spelling</b> of that channel. Record the lead, and emit its <code class="inline">created</code> event. Then walk the funnel: flip the MQL coin — if it passes, add a random delay and emit an <code class="inline">mql</code> event; <b>but if that event's date lands after today, stop and emit nothing</b> (the lead is censored). Repeat for SQL, Opportunity, and finally Won/Lost. Separately, for every channel on every day, record a spend amount.</p>`)}
-
   <h2 class="sec">The only Python you need — a short primer</h2>
   <p>You'll use a handful of ideas. Here's each with a tiny example; ask for more on any one:</p>
   <div class="tbl-wrap"><table class="data">
@@ -916,9 +912,174 @@ CREATE TABLE spend (
   ${callout('warn','The #1 beginner error','⚠️',`<p>Python uses <b>indentation</b> (leading spaces) to show what's inside a loop or an <code class="inline">if</code>. Misaligned spaces cause <code class="inline">IndentationError</code>. Keep everything inside a block indented by the same amount (4 spaces is standard), and never mix tabs and spaces.</p>`)}
   <p>One more idea worth naming: <code class="inline">random.seed(42)</code> at the top makes the "random" data come out <b>identical every run</b>. That's <b>reproducibility</b> — anyone who runs your script gets your exact numbers, so your results aren't a fluke of one lucky run. Interviewers love this.</p>
 
-  ${callout('turn','Your turn — write generate_data.py','✍️',`<p>Produce three CSV files matching your three grains. Expect errors — that's normal. Read the <b>last line</b> of any error: it names the file, the line number, and what went wrong. Fix that one line. Bring me the error message, not a request to write the script for you. Run it with <code class="inline">python3 generate_data.py</code>.</p>`)}
-  ${reveal('Reveal reference generator — heavily commented',`
-    <p>Study the comments; they explain <i>why</i>, which is what you'll be asked about. Tune the numbers — owning them is part of owning the project.</p>
+  <h2 class="sec">Build it in four passes, not one</h2>
+  <p>Do not try to write the whole generator in one sitting. You'll hit an error forty lines in with six ideas half-implemented and no way to tell which one broke. Build it in <b>four passes</b> instead. Each pass is a script you can actually <i>run</i>, producing a file you can actually <i>open</i>. You only add the next idea once the current one is on disk and looks right.</p>
+  <div class="tbl-wrap"><table class="data">
+    <tr><th>Pass</th><th>What you add</th><th>What you end up with</th></tr>
+    <tr><td><b>1</b></td><td>Leads, weighted channels, dirty spellings</td><td><code class="inline">leads.csv</code> — 2,000 rows</td></tr>
+    <tr><td><b>2</b></td><td>One coin flip, one event</td><td>+ <code class="inline">lead_stage_events.csv</code> with <code class="inline">created</code> &amp; <code class="inline">mql</code></td></tr>
+    <tr><td><b>3</b></td><td>The rest of the chain, and censoring</td><td>the full leaky funnel</td></tr>
+    <tr><td><b>4</b></td><td>Spend, on its own grain</td><td>+ <code class="inline">spend.csv</code></td></tr>
+  </table></div>
+  <p>This is also how you'd build it at work, and it's worth being able to say out loud: <i>"I built it incrementally and verified the output at each stage, rather than debugging a finished script."</i></p>
+
+  <h2 class="sec">Pass 1 — leads only</h2>
+  <p><b>In words:</b> for each of 2,000 leads, pick a random created date between Jan 1 and today; pick a channel, weighted so Google is common and webinar rare; pick a messy spelling of that channel; write the row. No events, no funnel, no spend yet.</p>
+  ${callout('turn','Your turn','✍️',`<p>Write this much and run it: <code class="inline">python3 generate_data.py</code>. Expect errors — read the <b>last line</b> of the traceback first: it names the file, the line number, and what went wrong. Fix that one line, run again. Bring me the error message, not a request to write the script for you.</p>`)}
+  ${callout('tip','Check before moving on','🔍',`<p>Open <code class="inline">leads.csv</code> in a spreadsheet. (1) Is it 2,001 lines — 2,000 leads plus a header? (2) Do <code class="inline">google</code>, <code class="inline">Google</code> and <code class="inline">GOOGLE</code> all appear, as separate values? (3) Are the dates spread across the whole range rather than clumped? Every later pass inherits this file, so fix it now.</p>`)}
+  ${reveal('Reveal pass 1',`
+    ${code('python',`import csv, random
+from datetime import datetime, timedelta
+
+random.seed(42)   # same "random" data every run -> reproducible
+
+N_LEADS = 2000
+START = datetime(2025, 1, 1)
+TODAY = datetime(2025, 7, 24)          # anything after this is the future
+DAYS  = (TODAY - START).days
+
+# channels differ in VOLUME (weight) and QUALITY (multiplier, used from pass 2)
+channels = {
+  "google":   {"weight":40,"quality":1.0,"spell":["google","Google","Google Ads","GOOGLE"]},
+  "linkedin": {"weight":25,"quality":1.4,"spell":["linkedin","LinkedIn","Linkedin"]},
+  "webinar":  {"weight":15,"quality":1.8,"spell":["webinar","Webinar","WEBINAR"]},
+  "organic":  {"weight":20,"quality":0.7,"spell":["organic","Organic","organic search"]},
+}
+names   = list(channels)
+weights = [channels[c]["weight"] for c in names]
+
+leads = []
+for lid in range(1, N_LEADS+1):
+    created = START + timedelta(days=random.randint(0,DAYS), hours=random.randint(0,23))
+    ch  = random.choices(names, weights=weights)[0]
+    src = random.choice(channels[ch]["spell"])   # the dirt
+    leads.append([lid, created.isoformat(), src,
+                  f"campaign_{random.randint(1,6)}",
+                  random.choice(["NA","EMEA","APAC"])])
+
+with open("leads.csv","w",newline="") as f:
+    w = csv.writer(f)
+    w.writerow(["lead_id","created_at","source_raw","campaign","region"])
+    w.writerows(leads)
+print(f"Wrote {len(leads)} leads.")`,'generate_data.py — pass 1')}
+  `)}
+
+  <h2 class="sec">Pass 2 — one coin flip, one event</h2>
+  <p><b>In words:</b> add a second list, <code class="inline">events</code>. Every lead emits a <code class="inline">created</code> event at its created time. Then flip <i>one</i> weighted coin: if it passes, add a random delay and emit an <code class="inline">mql</code> event. Stop there — no SQL, no opportunity yet.</p>
+  <p>Two new ideas arrive in this pass. <b>Quality tilts the coin:</b> a webinar lead with quality 1.8 flips against 0.55 × 1.8 ≈ 0.95, so it advances far more often than an organic lead at 0.55 × 0.7. And <b>the delay is exponential, not fixed</b> — <code class="inline">random.expovariate(1/3)</code> gives mostly-short waits with a long tail, which is exactly why your duration averages will later disagree with your medians.</p>
+  ${callout('turn','Your turn','✍️',`<p>Add the events list and the single MQL flip. <b>Predict before you run it:</b> roughly how many rows should <code class="inline">lead_stage_events.csv</code> have? Write your number down first, then check.</p>`)}
+  ${callout('tip','Check before moving on','🔍',`<p>You should get ~2,000 <code class="inline">created</code> rows plus somewhere around 1,100–1,300 <code class="inline">mql</code> rows — above the flat 55% because the high-quality channels pull it up. If your MQL count is ~2,000, your flip isn't gating anything. If it's ~0, your comparison is backwards.</p>`)}
+  ${reveal('Reveal pass 2',`
+    ${code('python',`# everything from pass 1 stays; these are the changes
+
+BASE  = {"mql":0.55}      # the "truth" you are planting
+DELAY = {"mql":3}         # average days from created -> mql
+
+leads, events = [], []
+eid = 1
+for lid in range(1, N_LEADS+1):
+    created = START + timedelta(days=random.randint(0,DAYS), hours=random.randint(0,23))
+    ch  = random.choices(names, weights=weights)[0]
+    src = random.choice(channels[ch]["spell"])
+    q   = channels[ch]["quality"]                  # NEW: quality tilts the coin
+    leads.append([lid, created.isoformat(), src,
+                  f"campaign_{random.randint(1,6)}",
+                  random.choice(["NA","EMEA","APAC"])])
+
+    events.append([eid, lid, "created", created.isoformat()]); eid += 1
+
+    if random.random() < min(BASE["mql"]*q, 0.95):     # the weighted coin flip
+        t = created + timedelta(days=random.expovariate(1/DELAY["mql"]))
+        events.append([eid, lid, "mql", t.isoformat()]); eid += 1
+
+# ... write leads.csv as before, then also:
+with open("lead_stage_events.csv","w",newline="") as f:
+    w = csv.writer(f)
+    w.writerow(["event_id","lead_id","stage","event_at"])
+    w.writerows(events)`,'generate_data.py — pass 2')}
+  `)}
+
+  <h2 class="sec">Pass 3 — the rest of the chain, and censoring</h2>
+  <p><b>In words:</b> repeat the same flip-then-delay for SQL, Opportunity and finally Won/Lost, each one nested inside the previous — a lead only gets a shot at the SQL flip if it already passed MQL. Then add the single most important line in the whole script: <b>if an event's date lands after today, emit nothing and stop walking that lead.</b></p>
+  <p>That one line is what creates <b>censoring</b>. A lead created three days ago that "would have" become an MQL next week simply has no MQL row — exactly like a real lead still sitting in the funnel when you take your snapshot. You are not modelling a bug; you are modelling the passage of time. Module 6's entire judgment trap rests on this line existing.</p>
+  <p>Because the same rule is now needed at four different places, it's worth pulling it into one small function (<code class="inline">emit</code>) that records an event and returns <code class="inline">False</code> if the event is in the future. Writing the check once means you can't forget it at one stage and silently break your censoring.</p>
+  ${callout('turn','Your turn','✍️',`<p>Extend the chain and add the future check. <b>Predict first:</b> 0.55 × 0.45 × 0.40 × 0.30 ≈ 3%, so ~60 of 2,000 leads should close. Will your actual <code class="inline">closed_won</code> count land above or below that, and why?</p>`)}
+  ${callout('tip','Check before moving on','🔍',`<p>Two checks. (1) Group your events by stage — the counts should shrink at every step. (2) Find a lead created in the last week and confirm it has <b>only</b> a <code class="inline">created</code> row. If every recent lead already has a full history, your future check isn't firing, and Module 6 will have nothing to teach you.</p>`)}
+  ${reveal('Reveal pass 3',`
+    ${code('python',`BASE  = {"mql":0.55,"sql":0.45,"opp":0.40,"won":0.30}   # the "truth"
+DELAY = {"mql":3,"sql":10,"opp":25,"closed":45}        # later stages take longer
+
+leads, events = [], []
+eid = 1
+
+def emit(lid, stage, when):
+    """Record an event -- unless it hasn't happened yet."""
+    global eid
+    if when > TODAY:                  # CENSORING: future events do not exist
+        return False
+    events.append([eid, lid, stage, when.isoformat()]); eid += 1
+    return True
+
+for lid in range(1, N_LEADS+1):
+    created = START + timedelta(days=random.randint(0,DAYS), hours=random.randint(0,23))
+    ch  = random.choices(names, weights=weights)[0]
+    src = random.choice(channels[ch]["spell"])
+    q   = channels[ch]["quality"]
+    leads.append([lid, created.isoformat(), src,
+                  f"campaign_{random.randint(1,6)}",
+                  random.choice(["NA","EMEA","APAC"])])
+
+    emit(lid, "created", created)
+    t = created
+    if random.random() < min(BASE["mql"]*q, 0.95):
+        t += timedelta(days=random.expovariate(1/DELAY["mql"]))
+        if not emit(lid, "mql", t): continue
+        if random.random() < min(BASE["sql"]*q, 0.95):
+            t += timedelta(days=random.expovariate(1/DELAY["sql"]))
+            if not emit(lid, "sql", t): continue
+            if random.random() < min(BASE["opp"]*q, 0.95):
+                t += timedelta(days=random.expovariate(1/DELAY["opp"]))
+                if not emit(lid, "opportunity", t): continue
+                t += timedelta(days=random.expovariate(1/DELAY["closed"]))
+                emit(lid, "closed_won" if random.random() < min(BASE["won"]*q,0.95) else "closed_lost", t)`,'generate_data.py — pass 3')}
+    <p>Each <code class="inline">continue</code> means "this lead is censored — abandon it and start the next one." Without those, a lead could get an opportunity event dated before its MQL event, which is nonsense your Module 5 queries would happily average.</p>
+  `)}
+
+  <h2 class="sec">Pass 4 — spend, on its own grain</h2>
+  <p><b>In words:</b> a completely separate loop, after the lead loop has finished. Walk day by day from Jan 1 to today; for each day, for each channel, write one row with an amount, impressions and clicks.</p>
+  <p>Notice what the code forces on you: the spend row has <b>no lead_id</b>, and there is nowhere sensible to put one. Money is spent on a channel on a day whether or not anybody fills in a form. That's the different-grain problem from Module 2 made physical — and it's why Module 7 has to summarise both sides before dividing rather than joining spend straight onto leads.</p>
+  <p>One more detail worth noticing: spend records the <b>clean</b> channel name, while leads record the <b>dirty</b> spelling. Reconciling those two is not busywork — it's the join you'll have to make work in Module 7.</p>
+  ${callout('turn','Your turn','✍️',`<p>Add the spend loop. <b>Predict first:</b> Jan 1 to Jul 24 is about 205 days and you have 4 channels — how many rows should <code class="inline">spend.csv</code> have?</p>`)}
+  ${callout('tip','Check before moving on','🔍',`<p>Row count should equal days × channels (~820). Confirm there's no <code class="inline">lead_id</code> column, and that the <code class="inline">channel</code> values are clean — four distinct values, not twelve spellings.</p>`)}
+  ${reveal('Reveal pass 4',`
+    ${code('python',`# SPEND -- its own loop, its own grain (channel x day)
+spend  = []
+sid    = 1
+day    = START
+budget = {"google":500,"linkedin":350,"webinar":150,"organic":40}
+while day <= TODAY:
+    for ch in names:
+        amt = round(budget[ch]*random.uniform(0.7,1.3), 2)
+        imp = int(amt*random.uniform(80,120))
+        clk = int(imp*random.uniform(0.01,0.04))
+        spend.append([sid, ch, day.date().isoformat(), amt, imp, clk]); sid += 1
+    day += timedelta(days=1)
+
+# one helper instead of three near-identical with-blocks
+def write(name, header, rows):
+    with open(name,"w",newline="") as f:
+        w = csv.writer(f); w.writerow(header); w.writerows(rows)
+
+write("leads.csv",             ["lead_id","created_at","source_raw","campaign","region"], leads)
+write("lead_stage_events.csv", ["event_id","lead_id","stage","event_at"], events)
+write("spend.csv",             ["spend_id","channel","spend_date","amount","impressions","clicks"], spend)
+print(f"Wrote {len(leads)} leads, {len(events)} events, {len(spend)} spend rows.")`,'generate_data.py — pass 4')}
+  `)}
+
+  ${callout('warn','Be able to explain these three without notes','🎙️',`<p><b>expovariate</b> — why your delays cluster small with a long tail, and why that makes mean ≠ median. <b>if when &gt; TODAY</b> — the one line that creates censoring, and what a censored lead looks like in the CSV. <b>The separate spend loop</b> — why spend has no lead_id and what that costs you later. Tune the numbers in the dictionaries too; owning them is part of owning the project.</p>`)}
+
+  ${reveal('The finished script, in one piece',`
+    <p>All four passes assembled, for checking your finished work against. Build it in passes anyway — reading this top-to-bottom teaches you much less than getting each pass to run.</p>
     ${code('python',`import csv, random
 from datetime import datetime, timedelta
 
@@ -944,6 +1105,15 @@ DELAY = {"mql":3,"sql":10,"opp":25,"closed":45}        # later stages take longe
 
 leads, events = [], []
 eid = 1
+
+def emit(lid, stage, when):
+    """Record an event -- unless it hasn't happened yet."""
+    global eid
+    if when > TODAY:          # CENSORING: future events don't exist yet
+        return False
+    events.append([eid, lid, stage, when.isoformat()]); eid += 1
+    return True
+
 for lid in range(1, N_LEADS+1):
     created = START + timedelta(days=random.randint(0,DAYS), hours=random.randint(0,23))
     ch = random.choices(names, weights=weights)[0]
@@ -953,26 +1123,19 @@ for lid in range(1, N_LEADS+1):
                   f"campaign_{random.randint(1,6)}",
                   random.choice(["NA","EMEA","APAC"])])
 
-    def emit(stage, when):
-        global eid
-        if when > TODAY:          # CENSORING: future events don't exist yet
-            return False
-        events.append([eid, lid, stage, when.isoformat()]); eid += 1
-        return True
-
-    emit("created", created)
+    emit(lid, "created", created)
     t = created
     if random.random() < min(BASE["mql"]*q, 0.95):
         t += timedelta(days=random.expovariate(1/DELAY["mql"]))
-        if not emit("mql", t): continue
+        if not emit(lid, "mql", t): continue
         if random.random() < min(BASE["sql"]*q, 0.95):
             t += timedelta(days=random.expovariate(1/DELAY["sql"]))
-            if not emit("sql", t): continue
+            if not emit(lid, "sql", t): continue
             if random.random() < min(BASE["opp"]*q, 0.95):
                 t += timedelta(days=random.expovariate(1/DELAY["opp"]))
-                if not emit("opportunity", t): continue
+                if not emit(lid, "opportunity", t): continue
                 t += timedelta(days=random.expovariate(1/DELAY["closed"]))
-                emit("closed_won" if random.random() < min(BASE["won"]*q,0.95) else "closed_lost", t)
+                emit(lid, "closed_won" if random.random() < min(BASE["won"]*q,0.95) else "closed_lost", t)
 
 # SPEND: its own loop, its own grain (channel x day)
 spend = []; sid = 1; day = START
@@ -991,10 +1154,10 @@ write("leads.csv", ["lead_id","created_at","source_raw","campaign","region"], le
 write("lead_stage_events.csv", ["event_id","lead_id","stage","event_at"], events)
 write("spend.csv", ["spend_id","channel","spend_date","amount","impressions","clicks"], spend)
 print(f"Wrote {len(leads)} leads, {len(events)} events, {len(spend)} spend rows.")`)}
-    <p>Worth being able to explain: <b>expovariate</b> gives delays that cluster small with a long tail (realistic, and why your duration averages skew); the <b>if when &gt; TODAY</b> line is the single most important one — it cuts recent leads off mid-funnel exactly like real in-flight leads; and <b>spend is a separate loop with its own grain</b>.</p>
+    <p>If your version differs from this, that's fine — different numbers, different column names, a different structure. What matters is that you can point at the line that creates censoring and the line that creates the dirty spellings, and say why each is there.</p>
   `)}
  `,
- checkpoint:`Three CSV files exist. You can open <code class="inline">leads.csv</code> and see messy source spellings, and explain which line creates the censoring.`
+ checkpoint:`All four passes ran. Three CSV files exist, each one checked before you moved on. You can open <code class="inline">leads.csv</code> and see messy source spellings, point at the line that creates the censoring, and name a lead that is censored.`
 },
 
 {num:'4',title:'Load the data',time:'30 min',tag:'CSVs into Postgres',
