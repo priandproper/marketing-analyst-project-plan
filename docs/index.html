@@ -85,7 +85,7 @@
   .nav-item.active .ix{background:var(--accent);color:#fff;border-color:transparent}
   .nav-item .tick{margin-left:auto;color:var(--green);font-size:13px;opacity:0}
   .nav-item.done .tick{opacity:1}
-  .side-foot{margin-top:auto;display:flex;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--line-2)}
+  .side-foot{margin-top:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:8px;border-top:1px solid var(--line-2)}
   .ghost{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:7px 10px;font-size:12px;cursor:pointer;font-weight:600}
   .ghost:hover{color:var(--ink)}
   /* ---------- main ---------- */
@@ -302,6 +302,7 @@
     <nav id="nav"></nav>
     <div class="side-foot">
       <button class="ghost" id="theme-btn">◐ Theme</button>
+      <button class="ghost" id="llm-btn" title="Download progress, notes, and playground data as one markdown file for an AI to analyze">⇪ AI export</button>
       <button class="ghost" id="reset-btn">↺ Reset</button>
     </div>
   </aside>
@@ -1675,6 +1676,113 @@ function htmlToMarkdown(html){
   return walk(tmp).replace(new RegExp(NL+'{3,}','g'),NL+NL).trim();
 }
 
+/* ---------- AI export (everything you've done, one markdown file for an LLM) ---------- */
+function stripTags(s){return String(s||'').replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();}
+function mdTable(cols,rows){
+  const NL=String.fromCharCode(10);
+  const esc=v=>String(v).replace(/\|/g,'\\|');
+  return '| '+cols.map(esc).join(' | ')+' |'+NL+
+    '|'+cols.map(()=>' --- ').join('|')+'|'+NL+
+    rows.map(r=>'| '+r.map(esc).join(' | ')+' |').join(NL);
+}
+async function buildLLMExport(){
+  const NL=String.fromCharCode(10);
+  const out=[];const push=s=>out.push(s);
+  push('# Marketing Funnel Analytics — learner data export');
+  push('');
+  push('Exported '+new Date().toISOString().slice(0,10)+' from the in-browser learning app. It captures everything the learner has done there: course progress, time invested, every note they wrote, and the current state of the in-browser Postgres practice database.');
+  push('');
+  push('Context for analysis: the course teaches marketing-funnel data modeling and SQL — grain, fan-out, event tables vs. current state, censored data, cohort maturity, and cost-per-lead vs. cost-per-customer. Useful things to do with this file: assess progress and gaps, check the notes for misconceptions, quiz the learner on concepts marked as read, and suggest what to work on next.');
+  push('');
+  push('## Course progress');
+  push('');
+  push('- Overall: '+overallPct()+'% — '+conceptsRead()+'/'+ALL_CONCEPTS.length+' concepts read, '+MODULES.filter(m=>state.done[m.num]).length+'/'+MODULES.length+' module checkpoints done');
+  push('- Total active time in app: '+fmtDur(timeState.total));
+  push('');
+  for(const m of MODULES){
+    const st=moduleStatus(m);
+    const label=st==='done'?'complete':st==='ip'?'in progress':'not started';
+    push('### Module '+m.num+' — '+stripTags(m.title)+' ('+label+')');
+    push('');
+    push('_'+stripTags(m.tag)+' · '+moduleConceptsRead(m)+'/'+m.concepts.length+' concepts read · '+fmtDur(timeState.byModule[m.num]||0)+' spent here_');
+    push('');
+    for(const c of m.concepts)push('- ['+(state.read[c.id]?'x':' ')+'] '+stripTags(c.title));
+    push('- ['+(state.done[m.num]?'x':' ')+'] Checkpoint: '+stripTags(m.checkpoint));
+    push('');
+  }
+  push('## Time invested by day');
+  push('');
+  const days=Object.keys(timeState.byDay).sort();
+  if(days.length)push(mdTable(['Date','Active time'],days.map(d=>[d,fmtDur(timeState.byDay[d])])));
+  else push('_No time recorded yet._');
+  push('');
+  push('## Notes — global scratchpad (My Notes page)');
+  push('');
+  const g=localStorage.getItem(NOTES_KEY);
+  if(g===null)push('_Never edited — still the default seed content._');
+  else if(!stripTags(g))push('_Empty._');
+  else push(htmlToMarkdown(g));
+  push('');
+  push('## Notes — per-page drawer');
+  push('');
+  const pages=[['dash','Dashboard']].concat(MODULES.map(m=>['m'+m.num,'Module '+m.num+' — '+stripTags(m.title)]));
+  let anyPn=false;
+  for(const [k,title] of pages){
+    const html=localStorage.getItem('mfa_pn_'+k)||'';
+    if(!stripTags(html))continue;
+    anyPn=true;
+    push('### '+title);push('');push(htmlToMarkdown(html));push('');
+  }
+  if(!anyPn){push('_No per-page notes written yet._');push('');}
+  push('## SQL practice database (in-browser Postgres)');
+  push('');
+  const dockSql=(localStorage.getItem('mfa_dock_sql')||'').trim();
+  if(dockSql){
+    push('Last query left in the SQL console:');
+    push('');
+    push('```sql'+NL+dockSql+NL+'```');
+    push('');
+  }
+  try{
+    const db=await ensurePG(sqlSetStatus);
+    const t=await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name");
+    if(!t.rows.length)push('_No tables in the playground database yet._');
+    for(const row of t.rows){
+      const tn=row.table_name;
+      const cols=await db.query("SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 ORDER BY ordinal_position",[tn]);
+      const cnt=await db.query('SELECT COUNT(*)::int AS n FROM "'+tn+'"');
+      push('### Table `'+tn+'` — '+cnt.rows[0].n+' rows');
+      push('');
+      push(mdTable(['Column','Type'],cols.rows.map(c=>[c.column_name,c.data_type])));
+      push('');
+      const sample=await db.query('SELECT * FROM "'+tn+'" LIMIT 5');
+      if(sample.rows.length){
+        const names=sample.fields.map(f=>f.name);
+        push('First '+sample.rows.length+' rows:');
+        push('');
+        push(mdTable(names,sample.rows.map(r=>names.map(n=>fmtCell(r[n])))));
+        push('');
+      }
+    }
+  }catch(e){
+    push('_Could not read the playground database ('+(e.message||e)+') — likely offline, so Postgres could not load._');
+  }
+  return out.join(NL);
+}
+async function exportForLLM(){
+  const btn=document.getElementById('llm-btn');
+  const old=btn.textContent;btn.textContent='Exporting…';btn.disabled=true;
+  try{
+    const md=await buildLLMExport();
+    const blob=new Blob([md],{type:'text/markdown'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='funnel-learning-export-'+new Date().toISOString().slice(0,10)+'.md';a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    btn.textContent='Exported ✓';
+  }catch(e){alert('Export failed: '+(e.message||e));btn.textContent=old;}
+  finally{setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1500);}
+}
+
 /* ---------- SQL Playground (real Postgres in the browser via PGlite/WASM) ---------- */
 let pgdb=null, pgLoading=null;
 function ensurePG(setStatus){
@@ -1799,6 +1907,7 @@ document.addEventListener('click',e=>{
 document.getElementById('reset-btn').addEventListener('click',()=>{
   if(confirm('Reset all progress? This clears every "read" and "complete" mark.')){state={read:{},done:{}};save();route();}
 });
+document.getElementById('llm-btn').addEventListener('click',exportForLLM);
 /* theme */
 const tkey='mfa_theme';
 function applyTheme(t){
